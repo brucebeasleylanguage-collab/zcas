@@ -1670,7 +1670,8 @@ function renderAchPanel(){
     const has = gs.achievements[a.id];
     return `<div class="py-0.5 ${has?'text-amber-300':'text-slate-500'}">${has?'✔':'✖'} ${a.n} <span class="opacity-50">· ${a.d}</span></div>`;
   }).join('');
-  $('#achCount').textContent = `${Object.keys(gs.achievements).length}/${ACHIEVEMENTS.length}`;
+  const earned = ACHIEVEMENTS.filter(a=>gs.achievements[a.id]).length;
+  $('#achCount').textContent = `${earned}/${ACHIEVEMENTS.length}`;
 }
 
 function refreshHUD(){
@@ -1748,7 +1749,7 @@ function castSkill(id){
   if(gs.realm < s.req) return toast('Cảnh giới chưa đủ!');
   if((gs.skillsCD[id]||0) > Date.now()) return;
   Sound.init();
-  try{ s.run(); }catch(e){}
+  s.run();
   gs.skillsCD[id] = Date.now() + s.cd*1000;
   saveGame(); refreshHUD(); renderSkillDock();
 }
@@ -1941,11 +1942,18 @@ function boot(){
 
   /* keyboard */
   addEventListener('keydown', e=>{
+    const target = e.target;
+    const editing = target instanceof HTMLElement &&
+      (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT|BUTTON)$/.test(target.tagName));
+    const modalOpen = $('#modalRoot').children.length > 0;
+
     if(e.key === ' '){
       if(gaugeActive){ e.preventDefault(); gaugeActive(); return; }
-      $('#btnCraft').click(); e.preventDefault();
+      if(!modalOpen && !editing){ $('#btnCraft').click(); e.preventDefault(); }
     }
-    if(['1','2','3','4'].includes(e.key)) castSkill(SKILLS[+e.key-1].id);
+    if(!modalOpen && !editing && ['1','2','3','4'].includes(e.key)){
+      castSkill(SKILLS[+e.key-1].id);
+    }
     if(e.key === 'Escape') closeModal();
   });
 
