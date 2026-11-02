@@ -1,0 +1,3061 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Tiệm Bánh Chuối Poinhoinhoi 3D 360° — Vạn Giới Bá Chủ</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: { poinhoi: { pink:'#f472b6', cream:'#fef08a', gold:'#facc15', jade:'#00fa9a' } },
+        fontFamily: { sans: ['Outfit','Inter','system-ui','sans-serif'] }
+      }
+    }
+  };
+</script>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap" rel="stylesheet">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+<style>
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; font-family:'Outfit',sans-serif; }
+  html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:#05070f; color:#fff; user-select:none; -webkit-user-select:none; }
+
+  #canvas-container { position:fixed; inset:0; z-index:0; cursor:grab; touch-action:none; }
+  #canvas-container:active { cursor:grabbing; }
+  #canvas-container canvas { display:block; }
+
+  .glass { background:rgba(13,18,32,.78); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); border:1px solid rgba(255,255,255,.12); }
+  .glass-card { background:rgba(26,34,54,.72); backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,.09); }
+  .neon-gold { box-shadow:0 0 18px rgba(250,204,21,.4), inset 0 0 10px rgba(250,204,21,.1); border:1px solid rgba(250,204,21,.55); }
+  .neon-cyan { box-shadow:0 0 18px rgba(34,211,238,.4); border:1px solid rgba(34,211,238,.45); }
+
+  @keyframes pulseGlow {
+    0%,100% { box-shadow:0 0 18px rgba(244,114,182,.55); transform:scale(1); }
+    50% { box-shadow:0 0 34px rgba(244,114,182,.95); transform:scale(1.015); }
+  }
+  .pulse { animation:pulseGlow 2.4s ease-in-out infinite; }
+  @keyframes softFloat { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-3px);} }
+  .float-y { animation:softFloat 3s ease-in-out infinite; }
+
+  ::-webkit-scrollbar { width:6px; height:6px; }
+  ::-webkit-scrollbar-track { background:rgba(15,23,42,.5); }
+  ::-webkit-scrollbar-thumb { background:#f472b6; border-radius:9999px; }
+
+  .modal {
+    position:fixed; inset:0; z-index:50; display:flex; align-items:center; justify-content:center;
+    padding:.9rem; background:rgba(3,6,15,.88);
+    backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+    opacity:0; pointer-events:none; transition:opacity .22s ease;
+  }
+  .modal.open { opacity:1; pointer-events:auto; }
+  .modal > .panel { transform:translateY(16px) scale(.97); transition:transform .28s cubic-bezier(.2,.9,.3,1.25); }
+  .modal.open > .panel { transform:translateY(0) scale(1); }
+
+  @keyframes flashPop { 0%{opacity:.85;} 100%{opacity:0;} }
+  #flash { position:fixed; inset:0; z-index:60; pointer-events:none; opacity:0; }
+  #flash.go { animation:flashPop .45s ease-out forwards; }
+
+  @keyframes floatUp {
+    0% { opacity:1; transform:translate(-50%,0) scale(.85); }
+    100% { opacity:0; transform:translate(-50%,-78px) scale(1.2); }
+  }
+  .float-text {
+    position:fixed; pointer-events:none; z-index:55; font-weight:900; font-size:20px;
+    letter-spacing:.5px; text-shadow:0 2px 12px rgba(0,0,0,.9), 0 0 22px currentColor;
+    animation:floatUp 1.15s cubic-bezier(.2,.7,.4,1) forwards;
+  }
+
+  .zone-perfect {
+    background:rgba(16,185,129,.28);
+    border-left:2px solid #34d399; border-right:2px solid #34d399;
+    box-shadow:inset 0 0 18px rgba(16,185,129,.45);
+  }
+  .needle {
+    position:absolute; top:-4px; bottom:-4px; width:4px; border-radius:9999px;
+    background:#f472b6; box-shadow:0 0 14px #f472b6, 0 0 26px rgba(244,114,182,.7);
+    transform:translateX(-50%);
+  }
+
+  input[type=range].slider {
+    -webkit-appearance:none; appearance:none; width:100%; height:14px; border-radius:9999px; outline:none;
+    background:linear-gradient(90deg,#f43f5e 0%,#f59e0b 25%,#10b981 45%,#10b981 60%,#f59e0b 78%,#f43f5e 100%);
+    border:1px solid rgba(255,255,255,.15);
+  }
+  input[type=range].slider::-webkit-slider-thumb {
+    -webkit-appearance:none; appearance:none; width:26px; height:26px; border-radius:50%;
+    background:#fff; border:3px solid #f472b6; box-shadow:0 0 16px rgba(244,114,182,.9); cursor:pointer;
+  }
+  input[type=range].slider::-moz-range-thumb {
+    width:22px; height:22px; border-radius:50%; background:#fff; border:3px solid #f472b6; cursor:pointer;
+  }
+
+  .tab-btn { transition:all .18s ease; }
+  .tab-btn.active {
+    background:linear-gradient(135deg,#ec4899,#f59e0b); color:#0b0f19; font-weight:900;
+    border-color:transparent; box-shadow:0 0 18px rgba(236,72,153,.5);
+  }
+  .realm-badge { background:linear-gradient(135deg,rgba(250,204,21,.18),rgba(244,114,182,.18)); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pulse, .float-y { animation:none !important; }
+  }
+</style>
+</head>
+
+<body class="relative">
+
+<!-- ================= 3D ================= -->
+<div id="canvas-container"></div>
+<div id="flash"></div>
+
+<!-- ================= UI ================= -->
+<div id="ui" class="fixed inset-0 z-10 p-3 md:p-5 flex flex-col justify-between pointer-events-none">
+
+  <!-- TOP -->
+  <div class="flex flex-wrap items-start justify-between gap-2 w-full max-w-[1400px] mx-auto">
+
+    <div class="glass rounded-2xl px-4 py-2.5 flex items-center gap-3 pointer-events-auto shadow-2xl" style="border-left:4px solid #f472b6">
+      <div class="w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center text-xl md:text-2xl font-black text-slate-900"
+           style="background:linear-gradient(135deg,#f472b6,#fef08a)">🐰</div>
+      <div class="min-w-0">
+        <h1 class="text-xs md:text-lg font-black tracking-tight leading-tight"
+            style="background:linear-gradient(90deg,#f9a8d4,#fde68a,#f472b6);-webkit-background-clip:text;background-clip:text;color:transparent;">
+          POINHOINHOI 3D BAKERY 360°
+        </h1>
+        <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-[9px] md:text-[11px] text-slate-300 font-semibold mt-0.5">
+          <span><i class="fa-solid fa-calendar-day text-pink-400 mr-1"></i>Ngày <b id="hud-day" class="text-white">1</b></span>
+          <span><i class="fa-solid fa-heart text-rose-400 mr-1"></i><b id="hud-served" class="text-white">0</b></span>
+          <span class="realm-badge px-2 py-0.5 rounded-md border border-amber-400/30">
+            <i class="fa-solid fa-fire text-amber-300 mr-1"></i><b id="hud-realm" class="text-amber-200">Luyện Khí</b>
+            <span id="hud-mult" class="text-amber-300/70">x1.0</span>
+          </span>
+          <span class="px-2 py-0.5 rounded-md border border-cyan-400/30 bg-cyan-500/10 text-cyan-200" id="hud-weather">☀️ Trời Quang</span>
+          <span class="px-2 py-0.5 rounded-md border border-orange-400/30 bg-orange-500/10 text-orange-200">🔥<b id="hud-streak">1</b></span>
+          <span class="px-2 py-0.5 rounded-md border border-violet-400/30 bg-violet-500/10 text-violet-200">☯<b id="hud-dao">0</b></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2 pointer-events-auto flex-wrap justify-end">
+      <div class="glass neon-gold rounded-2xl px-3 py-2 flex items-center gap-2 shadow-2xl">
+        <i class="fa-solid fa-coins text-lg text-yellow-400 float-y"></i>
+        <div>
+          <span class="text-[8px] text-yellow-200/70 uppercase font-bold tracking-widest block leading-none">Tiền</span>
+          <span id="hud-money" class="text-sm md:text-xl font-black text-yellow-300">150</span>
+        </div>
+      </div>
+
+      <div class="glass neon-cyan rounded-2xl px-3 py-2 flex items-center gap-2 shadow-2xl">
+        <i class="fa-solid fa-gem text-base text-cyan-400"></i>
+        <div>
+          <span class="text-[8px] text-cyan-200/70 uppercase font-bold tracking-widest block leading-none">Ngọc</span>
+          <span id="hud-gems" class="text-sm md:text-lg font-black text-cyan-300">5</span>
+        </div>
+      </div>
+
+      <div class="glass p-1.5 rounded-2xl flex items-center gap-1">
+        <button id="btn-audio" title="Âm thanh" class="w-8 h-8 md:w-9 md:h-9 rounded-lg bg-slate-800 hover:bg-slate-700 text-pink-400 flex items-center justify-center transition text-xs">
+          <i class="fa-solid fa-volume-high"></i>
+        </button>
+        <button id="btn-camera" title="Chụp ảnh" class="w-8 h-8 md:w-9 md:h-9 rounded-lg bg-slate-800 hover:bg-slate-700 text-violet-300 flex items-center justify-center transition text-xs">
+          <i class="fa-solid fa-camera"></i>
+        </button>
+        <button id="btn-share" title="Chia sẻ" class="w-8 h-8 md:w-9 md:h-9 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-300 flex items-center justify-center transition text-xs">
+          <i class="fa-solid fa-share-nodes"></i>
+        </button>
+        <button id="btn-reset-cam" title="Căn góc 360°" class="w-8 h-8 md:w-9 md:h-9 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400 flex items-center justify-center transition text-xs">
+          <i class="fa-solid fa-arrows-rotate"></i>
+        </button>
+        <button id="btn-save" title="Lưu" class="w-8 h-8 md:w-9 md:h-9 rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-400 flex items-center justify-center transition text-xs">
+          <i class="fa-solid fa-floppy-disk"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACTIVITY -->
+  <div class="hidden md:block fixed left-4 top-28 z-10 pointer-events-none">
+    <div id="activity-list" class="glass rounded-xl px-3 py-2 text-[10px] text-slate-400 w-60 space-y-1"></div>
+  </div>
+
+  <!-- TOAST -->
+  <div class="flex justify-center">
+    <div id="notice" class="glass px-4 py-2 rounded-full text-[11px] md:text-sm text-pink-200 text-center max-w-[92vw] shadow-2xl border border-pink-500/30"
+         style="opacity:0; transition:opacity .35s ease;">
+      <i class="fa-solid fa-wand-sparkles mr-1.5 text-pink-400"></i><span id="notice-text">Dùng chuột/vuốt để xoay 360°!</span>
+    </div>
+  </div>
+
+  <!-- BOTTOM -->
+  <div class="w-full max-w-6xl mx-auto flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2">
+
+    <div class="flex items-stretch gap-2 pointer-events-auto">
+      <button id="btn-bake" class="pulse flex-1 md:flex-none rounded-2xl px-4 md:px-7 py-3 font-black text-white text-xs md:text-lg flex items-center justify-center gap-2 active:scale-95 transition-transform border-2 border-pink-200/80"
+              style="background:linear-gradient(120deg,#ec4899,#f43f5e,#f59e0b);">
+        <i class="fa-solid fa-utensils text-lg md:text-xl text-yellow-100"></i>
+        <span class="leading-tight text-left">
+          <span class="block">ĐỘ KIẾP CHIÊN CHUỐI</span>
+          <span class="block text-[9px] md:text-[10px] font-bold text-yellow-100/90 tracking-wider"><span id="hud-bake-cost">-10 💰</span> · 100 ĐIỂM</span>
+        </span>
+      </button>
+
+      <button id="btn-sell" class="glass hover:bg-slate-800/80 rounded-2xl px-3 md:px-4 py-3 font-bold text-emerald-400 text-[11px] md:text-sm flex items-center justify-center gap-2 border border-emerald-500/40 active:scale-95 transition">
+        <i class="fa-solid fa-hand-holding-dollar text-base md:text-lg"></i>
+        <span class="text-left leading-tight">
+          <span class="block">BÁN</span>
+          <span class="block text-[9px] text-emerald-300/70 font-semibold"><b id="hud-cakes">0/3</b></span>
+        </span>
+      </button>
+    </div>
+
+    <div class="glass p-1.5 rounded-2xl flex items-center gap-1 pointer-events-auto">
+      <button id="btn-shop" class="flex-1 md:flex-initial px-3 py-2.5 rounded-xl bg-slate-800/80 hover:bg-amber-400 hover:text-slate-950 text-amber-300 font-bold text-[10px] md:text-xs flex items-center justify-center gap-1.5 transition">
+        <i class="fa-solid fa-fire-flame-curved"></i><span>TU LUYỆN</span>
+      </button>
+      <button id="btn-custom" class="flex-1 md:flex-initial px-3 py-2.5 rounded-xl bg-slate-800/80 hover:bg-pink-500 hover:text-white text-pink-300 font-bold text-[10px] md:text-xs flex items-center justify-center gap-1.5 transition">
+        <i class="fa-solid fa-wand-magic-sparkles"></i><span>TẠO HÌNH</span>
+      </button>
+      <button id="btn-next-day" class="flex-1 md:flex-initial px-3 py-2.5 rounded-xl text-white font-bold text-[10px] md:text-xs flex items-center justify-center gap-1.5 shadow-lg transition active:scale-95"
+              style="background:linear-gradient(120deg,#4f46e5,#9333ea);">
+        <i class="fa-solid fa-forward"></i><span>SANG NGÀY</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= DEMON BANNER ================= -->
+<div id="demon-banner" class="fixed top-24 left-1/2 -translate-x-1/2 z-40 hidden w-[92vw] max-w-sm">
+  <div class="glass rounded-2xl p-3 border border-purple-500/50" style="box-shadow:0 0 28px rgba(168,85,247,.5)">
+    <div class="flex items-center gap-2 mb-2">
+      <span class="text-2xl">👹</span>
+      <div class="flex-1 min-w-0">
+        <div class="text-[11px] font-black text-purple-200">THẦN MA VẠN GIỚI ĐÒI BÁNH!</div>
+        <div class="text-[10px] text-slate-400">Dâng 1 bánh trước khi hết giờ</div>
+      </div>
+      <b id="demon-count" class="text-rose-300 text-sm">14s</b>
+    </div>
+    <div class="h-2 rounded-full bg-slate-800 overflow-hidden mb-2">
+      <div id="demon-bar" class="h-full" style="width:100%; background:linear-gradient(90deg,#a855f7,#f43f5e)"></div>
+    </div>
+    <button id="btn-serve-demon" class="w-full py-2 rounded-xl text-white font-black text-xs active:scale-95 transition"
+            style="background:linear-gradient(120deg,#7c3aed,#e11d48)">DÂNG BÁNH 🍌</button>
+  </div>
+</div>
+
+<!-- ================= MODAL: CRAFT ================= -->
+<div id="modal-craft" class="modal">
+  <div class="panel glass w-full max-w-xl rounded-3xl p-5 md:p-7 shadow-2xl flex flex-col max-h-[94vh] overflow-hidden" style="border-color:rgba(244,114,182,.4)">
+
+    <div class="flex justify-between items-start mb-4 pb-3 border-b border-slate-700/70">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-2xl bg-pink-500/20 text-pink-400 flex items-center justify-center text-xl border border-pink-500/30">
+          <span id="craft-icon">🍌</span>
+        </div>
+        <div>
+          <h2 id="craft-title" class="text-base md:text-xl font-black text-white leading-tight">BƯỚC 1 · ÉP CHUỐI</h2>
+          <p id="craft-sub" class="text-[11px] text-slate-400">Canh vạch khi linh khí tụ đỉnh!</p>
+        </div>
+      </div>
+      <button id="craft-x" class="w-9 h-9 rounded-full bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 flex items-center justify-center transition shrink-0">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+
+    <div id="craft-step-1" class="space-y-5 py-2">
+      <p class="text-center text-xs md:text-sm font-semibold text-slate-300">
+        Bấm khi vạch đi vào <span class="text-emerald-400 font-black">VÙNG HOÀN MỸ</span>
+      </p>
+      <div class="relative w-full h-12 bg-slate-900 rounded-2xl overflow-hidden border-2 border-slate-700">
+        <div class="absolute inset-y-0 left-0 w-[71%] bg-red-950/50 flex items-center justify-center text-[10px] font-bold text-red-400/80 uppercase">Quá yếu</div>
+        <div class="absolute inset-y-0 zone-perfect" style="left:71%; width:16%;"></div>
+        <div class="absolute inset-y-0 flex items-center justify-center text-[9px] font-black text-emerald-300 uppercase" style="left:71%; width:16%;">Perfect</div>
+        <div class="absolute inset-y-0 right-0 w-[13%] bg-amber-950/70 flex items-center justify-center text-[10px] font-bold text-amber-500/80 uppercase">Quá mạnh</div>
+        <div id="press-needle" class="needle" style="left:0%;"></div>
+      </div>
+      <button id="btn-press" class="w-full py-4 rounded-2xl text-white font-black text-base md:text-lg shadow-2xl active:scale-95 transition hover:brightness-110"
+              style="background:linear-gradient(120deg,#ec4899,#f43f5e,#f59e0b);">💥 ÉP CHUỐI!</button>
+    </div>
+
+    <div id="craft-step-2" class="space-y-5 py-2 hidden">
+      <p class="text-center text-xs md:text-sm font-semibold text-slate-300">
+        Chọn độ dày bột <span class="text-emerald-400 font-black">VỪA ĐỦ</span>
+      </p>
+      <div class="space-y-3">
+        <div class="flex justify-between text-[10px] md:text-xs font-bold text-slate-400 px-1">
+          <span>Mỏng</span><span class="text-emerald-400">VỪA ĐỦ</span><span>Dày</span>
+        </div>
+        <input type="range" id="slider-batter" min="1" max="100" value="20" class="slider">
+        <div class="text-center text-xs text-slate-400">Độ dày: <b id="batter-value" class="text-pink-300">20</b></div>
+      </div>
+      <button id="btn-dip" class="w-full py-4 rounded-2xl text-white font-black text-base md:text-lg shadow-2xl active:scale-95 transition hover:brightness-110"
+              style="background:linear-gradient(120deg,#f43f5e,#ec4899);">🥣 NHÚNG BỘT</button>
+    </div>
+
+    <div id="craft-step-3" class="space-y-5 py-2 hidden">
+      <p class="text-center text-xs md:text-sm font-semibold text-slate-300">
+        Vớt bánh khi vào <span class="text-amber-300 font-black">VÙNG VÀNG ƯƠM</span>
+      </p>
+      <div class="rounded-2xl p-3 border-2 border-amber-500/40" style="background:linear-gradient(180deg,#1c0f0f,#2a1a08)">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[11px] font-bold text-amber-300"><i class="fa-solid fa-temperature-arrow-up animate-pulse mr-1"></i>Chảo: <b id="fry-temp" class="text-white">180°C</b></span>
+          <span class="text-[11px] font-black text-amber-400">ĐANG CHIÊN 🫧</span>
+        </div>
+        <div class="relative w-full h-12 bg-slate-900 rounded-xl overflow-hidden border border-slate-700">
+          <div class="absolute inset-y-0 left-0 w-[62%] bg-yellow-200/10 flex items-center justify-center text-[9px] font-bold text-yellow-200/60 uppercase">Còn tái</div>
+          <div class="absolute inset-y-0 zone-perfect" style="left:62%; width:20%;"></div>
+          <div class="absolute inset-y-0 flex items-center justify-center text-[9px] font-black text-emerald-300 uppercase" style="left:62%; width:20%;">Vàng ươm</div>
+          <div class="absolute inset-y-0 right-0 w-[18%] bg-red-950/70 flex items-center justify-center text-[9px] font-bold text-red-400/70 uppercase">Cháy</div>
+          <div id="fry-needle" class="needle" style="left:0%; background:#fbbf24; box-shadow:0 0 14px #fbbf24;"></div>
+        </div>
+      </div>
+      <button id="btn-fry" class="w-full py-4 rounded-2xl text-slate-950 font-black text-base md:text-lg shadow-2xl active:scale-95 transition hover:brightness-110"
+              style="background:linear-gradient(120deg,#ef4444,#f59e0b,#fde047);">🍳 VỚT BÁNH RA QUẦY!</button>
+    </div>
+
+    <div id="craft-result" class="space-y-4 py-2 hidden">
+      <div class="text-center">
+        <div class="w-20 h-20 mx-auto rounded-3xl flex items-center justify-center text-4xl shadow-2xl border-2 border-pink-200/50 mb-2"
+             style="background:linear-gradient(135deg,#f472b6,#fde047);">🐰</div>
+        <span class="text-[10px] text-pink-300 uppercase font-black tracking-[0.2em] block">Đánh giá đan dược</span>
+        <h3 id="res-score" class="text-5xl font-black text-yellow-300 my-1">0<span class="text-xl text-yellow-500/70">/100</span></h3>
+        <p id="res-grade" class="text-sm font-black text-emerald-400">—</p>
+      </div>
+      <div class="glass-card p-3.5 rounded-2xl border border-slate-700/70 space-y-2 text-xs">
+        <div class="flex justify-between"><span class="text-slate-400">Độ ép chuối</span><b id="res-1" class="text-white">0/30</b></div>
+        <div class="flex justify-between"><span class="text-slate-400">Độ dày bột</span><b id="res-2" class="text-white">0/35</b></div>
+        <div class="flex justify-between"><span class="text-slate-400">Thời gian chiên</span><b id="res-3" class="text-white">0/35</b></div>
+        <div class="border-t border-slate-700/70 pt-2 flex justify-between"><span class="text-amber-300 font-bold">Bánh thu được</span><b id="res-cakes" class="text-amber-300">1</b></div>
+      </div>
+      <button id="btn-finish" class="w-full py-3.5 rounded-2xl text-white font-black text-base shadow-xl hover:brightness-110 transition active:scale-95"
+              style="background:linear-gradient(120deg,#10b981,#0d9488);">BÀY BÁNH LÊN QUẦY <i class="fa-solid fa-check ml-1"></i></button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL: SHOP ================= -->
+<div id="modal-shop" class="modal">
+  <div class="panel glass w-full max-w-3xl rounded-3xl p-4 md:p-7 shadow-2xl flex flex-col max-h-[92vh]" style="border-color:rgba(250,204,21,.3)">
+    <div class="flex justify-between items-start mb-3 pb-3 border-b border-slate-700/70">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-lg border border-amber-500/30">
+          <i class="fa-solid fa-dragon"></i>
+        </div>
+        <div>
+          <h2 class="text-base md:text-xl font-black text-white leading-tight">VẠN GIỚI BÁ CHỦ</h2>
+          <p class="text-[11px] text-slate-400">Tu luyện · Tạo hình · Bá khí · Nhiệm vụ</p>
+        </div>
+      </div>
+      <button class="shop-x w-9 h-9 rounded-full bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 flex items-center justify-center transition shrink-0">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+
+    <div class="flex gap-1.5 mb-3 flex-wrap" id="shop-tabs">
+      <button data-tab="realm"   class="tab-btn active px-2.5 py-1.5 rounded-xl bg-slate-800 text-slate-300 text-[10px] font-bold border border-slate-700">⚡ Cảnh Giới</button>
+      <button data-tab="skin"    class="tab-btn px-2.5 py-1.5 rounded-xl bg-slate-800 text-slate-300 text-[10px] font-bold border border-slate-700">🎨 Tạo Hình</button>
+      <button data-tab="aura"    class="tab-btn px-2.5 py-1.5 rounded-xl bg-slate-800 text-slate-300 text-[10px] font-bold border border-slate-700">🔥 Bá Khí</button>
+      <button data-tab="upgrade" class="tab-btn px-2.5 py-1.5 rounded-xl bg-slate-800 text-slate-300 text-[10px] font-bold border border-slate-700">⬆️ Nâng Cấp</button>
+      <button data-tab="quest"   class="tab-btn px-2.5 py-1.5 rounded-xl bg-slate-800 text-slate-300 text-[10px] font-bold border border-slate-700">📜 Nhiệm Vụ</button>
+      <button data-tab="retinue" class="tab-btn px-2.5 py-1.5 rounded-xl bg-slate-800 text-slate-300 text-[10px] font-bold border border-slate-700">🐾 Tùy Tùng</button>
+    </div>
+
+    <div id="shop-body" class="space-y-2.5 overflow-y-auto pr-1 flex-1"></div>
+  </div>
+</div>
+
+<!-- ================= MODAL: SUMMARY ================= -->
+<div id="modal-summary" class="modal">
+  <div class="panel glass w-full max-w-md rounded-3xl p-6 text-center shadow-2xl border border-pink-500/40">
+    <div class="w-20 h-20 mx-auto rounded-3xl flex items-center justify-center text-4xl shadow-xl mb-4 border-2 border-white/20"
+         style="background:linear-gradient(135deg,#f472b6,#fde047);">🏆</div>
+    <h2 class="text-xl font-black text-white mb-1">KẾT THÚC NGÀY <span id="sum-day">1</span></h2>
+    <p class="text-[11px] text-slate-400 mb-5">Báo cáo linh khí & doanh thu</p>
+
+    <div class="space-y-2.5 text-left glass-card p-4 rounded-2xl mb-5 border border-slate-700/60">
+      <div class="flex justify-between items-center text-sm">
+        <span class="text-slate-400"><i class="fa-solid fa-heart text-rose-400 mr-2"></i>Khách hài lòng</span>
+        <b id="sum-served" class="text-white">0</b>
+      </div>
+      <div class="flex justify-between items-center text-sm">
+        <span class="text-slate-400"><i class="fa-solid fa-bread-slice text-yellow-400 mr-2"></i>Bánh đã bán</span>
+        <b id="sum-sold" class="text-yellow-300">0</b>
+      </div>
+      <div class="flex justify-between items-center text-sm">
+        <span class="text-slate-400"><i class="fa-solid fa-coins text-amber-400 mr-2"></i>Doanh thu</span>
+        <b id="sum-earn" class="text-emerald-400 text-base">+0</b>
+      </div>
+      <div class="flex justify-between items-center text-sm border-t border-slate-700/70 pt-2">
+        <span class="text-slate-400"><i class="fa-solid fa-gem text-cyan-400 mr-2"></i>Kim cương nhận</span>
+        <b id="sum-gems" class="text-cyan-300">+1</b>
+      </div>
+      <div class="flex justify-between items-center text-sm">
+        <span class="text-slate-400"><i class="fa-solid fa-fire text-orange-400 mr-2"></i>Chuỗi ngày</span>
+        <b id="sum-streak" class="text-orange-300">1</b>
+      </div>
+    </div>
+
+    <button id="btn-start-day" class="w-full py-3.5 rounded-xl text-white font-black text-base shadow-xl hover:brightness-110 transition active:scale-95"
+            style="background:linear-gradient(120deg,#ec4899,#f59e0b);">BẮT ĐẦU NGÀY MỚI <i class="fa-solid fa-arrow-right ml-1"></i></button>
+  </div>
+</div>
+
+<!-- ================= MODAL: OFFLINE ================= -->
+<div id="modal-offline" class="modal">
+  <div class="panel glass w-full max-w-sm rounded-3xl p-6 text-center border border-cyan-500/40">
+    <div class="text-5xl mb-2">🧘</div>
+    <h2 class="text-lg font-black text-white">BẾ QUAN KẾT THÚC</h2>
+    <p id="offline-time" class="text-[11px] text-slate-400 mb-4">—</p>
+    <div class="glass-card p-4 rounded-2xl mb-4">
+      <span class="text-[10px] uppercase tracking-widest text-slate-400">Linh khí tích luỹ</span>
+      <div id="offline-gain" class="text-3xl font-black text-yellow-300">+0 💰</div>
+      <div id="offline-note" class="text-[10px] text-cyan-200/70 mt-1">—</div>
+    </div>
+    <button id="btn-offline-ok" class="w-full py-3 rounded-xl font-black text-white active:scale-95 transition"
+            style="background:linear-gradient(120deg,#0891b2,#0d9488)">NHẬN LINH KHÍ</button>
+  </div>
+</div>
+
+<!-- ================= ENGINE ================= -->
+<script>
+/* =========================================================
+   POINHOINHOI 3D BAKERY 360° — VẠN GIỚI BÁ CHỦ
+   v2 · offline · quests · streak · apprentice · pets
+        · demon boss · weather · prestige · photo · a11y
+   ========================================================= */
+
+const SAVE_KEY = 'poinhoinhoi_xianxia_v2';
+const REDUCE_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- DATA ---------- */
+const REALMS = [
+  { name:'Luyện Khí',        full:'Luyện Khí Kỳ',        mult:1.0,  cost:0,      icon:'🌱', fx:'Hào quang sơ cấp' },
+  { name:'Trúc Cơ',          full:'Trúc Cơ Kỳ',          mult:1.5,  cost:500,    icon:'🎋', fx:'Vòng hào quang xanh ngọc' },
+  { name:'Kim Đan',          full:'Kim Đan Kỳ',          mult:2.5,  cost:2000,   icon:'🔆', fx:'Kim đan xoay quanh' },
+  { name:'Nguyên Anh',       full:'Nguyên Anh Kỳ',       mult:4.0,  cost:10000,  icon:'⚔️', fx:'Ngự kiếm trận pháp' },
+  { name:'Hóa Thần',         full:'Hóa Thần Kỳ',         mult:7.0,  cost:50000,  icon:'🔮', fx:'Trận pháp thần thánh' },
+  { name:'Vô Thượng',        full:'VÔ THƯỢNG THIÊN TÔN', mult:12.0, cost:200000, icon:'🌌', fx:'Cột sáng vạn giới' }
+];
+
+const SKINS = {
+  pink_classic: { name:'Thỏ Hồng Poinhoinhoi', color:0xffb6c1, emissive:0x000000, price:0,   cur:'money', icon:'🐰', fx:'Tai vẫy nhẹ',        tag:'Cơ bản' },
+  white_cotton: { name:'Thỏ Trắng Bông Gòn',   color:0xffffff, emissive:0x000000, price:0,   cur:'money', icon:'☁️', fx:'Bụi bông tuyết',      tag:'Cơ bản' },
+  bich_ngoc:    { name:'Bích Ngọc Tiên Tử',    color:0x00fa9a, emissive:0x0a3d2a, price:300, cur:'money', icon:'💚', fx:'Cánh sen ngọc bay',   tag:'Linh khí' },
+  cuu_vi_thien: { name:'Cửu Vĩ Hồ Poinhoi',    color:0xff1493, emissive:0x2a0016, price:800, cur:'money', icon:'🦊', fx:'9 đuôi hồ ly vẫy',   tag:'Yêu thú',  tails:true },
+  long_vu_quan: { name:'Long Vũ Đế Vương',     color:0xffd700, emissive:0x3a2a00, price:35,  cur:'gems',  icon:'🐉', fx:'Long khí + Ngự kiếm', tag:'Đế vương', metal:0.85, horns:true }
+};
+
+const AURAS = {
+  off:       { name:'Tắt Bá Khí',         color:0xffffff, count:0,   mode:'none',      price:0,  cur:'money', icon:'⭕', fx:'Không hiệu ứng' },
+  saiyan:    { name:'Bá Khí Saiyan Gold', color:0xfacc15, count:50,  mode:'up',        price:200,cur:'money', icon:'⚡', fx:'Luồng khí bốc thẳng' },
+  fire:      { name:'Bá Khí Hỏa Diệm',    color:0xef4444, count:80,  mode:'flame',     price:600,cur:'money', icon:'🔥', fx:'Hỏa diệm bùng cháy' },
+  mystic:    { name:'Bá Khí Ma Thần',     color:0xa855f7, count:100, mode:'helix',     price:8,  cur:'gems',  icon:'🌀', fx:'Xoắn ốc tử khí' },
+  celestial: { name:'Vô Cực Thiên Tôn',   color:0x06b6d4, count:250, mode:'celestial', price:25, cur:'gems',  icon:'🌠', fx:'Cột sáng vũ trụ' }
+};
+
+const UPGRADES = {
+  bananaQuality: { name:'Chuối Sứ Cửu Thiên',        icon:'fa-wheat-awn', base:120, mult:1.75, max:10, desc:l => '+' + (l-1)*12 + '% giá bán' },
+  marketing:     { name:'Banner Quảng Cáo Linh Khí',  icon:'fa-bullhorn',  base:150, mult:1.85, max:5,  desc:l => 'Khách nhanh hơn ' + (l-1)*15 + '%' },
+  counterSlots:  { name:'Mở Rộng Quầy Bánh',          icon:'fa-store',     base:250, mult:2.20, max:6,  desc:l => 'Chứa tối đa ' + (l+2) + ' bánh' }
+};
+
+const PETS = {
+  fox:    { name:'Tiểu Hồ Ly',       icon:'🦊', price:6, color:0xff8fb8, desc:'+5% giá bán mỗi bánh' },
+  koi:    { name:'Cá Chép Hoá Rồng', icon:'🐟', price:6, color:0xfb923c, desc:'Khách tới nhanh hơn 10%' },
+  turtle: { name:'Rùa Thần',         icon:'🐢', price:8, color:0x34d399, desc:'Giảm 15% chi phí làm bánh' }
+};
+
+const WEATHERS = {
+  clear:     { name:'☀️ Trời Quang',   cust:1.0, price:1.0, desc:'Ngày bình thường' },
+  rain:      { name:'🌧️ Mưa Linh Khí', cust:2.0, price:1.0, desc:'Khách đông gấp đôi' },
+  storm:     { name:'🌪️ Bão Linh Khí', cust:0.5, price:1.3, desc:'Khách thưa, giá +30%' },
+  bloodmoon: { name:'🌕 Huyết Nguyệt', cust:1.2, price:1.2, desc:'Ma đầu xuất hiện nhiều' },
+  starfall:  { name:'⭐ Sao Băng',     cust:1.3, price:1.0, desc:'Mẻ kế tiếp chắc chắn ≥92' }
+};
+
+const QUEST_POOL = [
+  { id:'craft',  goal:4,   reward:200, icon:'🍌', text:'Làm 4 mẻ bánh' },
+  { id:'sold',   goal:10,  reward:350, icon:'💰', text:'Bán 10 chiếc bánh' },
+  { id:'served', goal:8,   reward:250, icon:'❤️', text:'Phục vụ 8 khách' },
+  { id:'high',   goal:90,  reward:500, icon:'🌟', text:'Đạt 1 mẻ ≥ 90 điểm' },
+  { id:'earn',   goal:800, reward:400, icon:'🪙', text:'Kiếm 800 💰 trong ngày' }
+];
+
+const BASE_MARKET = { banana:4, flour:3, oil:3 };
+
+const DEFAULT_STATE = {
+  money:150, gems:5, day:1,
+  totalServed:0, totalSold:0, dayEarnings:0,
+  realm:0, skin:'pink_classic', aura:'off',
+  ownedSkins:['pink_classic','white_cotton'],
+  ownedAuras:['off'],
+  upgrades:{ bananaQuality:1, marketing:1, counterSlots:1 },
+  cakes:[], bestScore:0,
+  // v2
+  lastSeen:0,
+  lastPlayDate:'',
+  streak:1,
+  streakRewardedOn:'',
+  quests:[],
+  dayStats:{ craft:0, sold:0, served:0, earn:0, high:0 },
+  hasApprentice:false,
+  apprenticeLevel:0,
+  pets:[],
+  pet:null,
+  daoHeart:0,
+  market:{ banana:4, flour:3, oil:3 },
+  weather:'clear',
+  starUsed:false,
+  activityLog:[]
+};
+
+let gameState = JSON.parse(JSON.stringify(DEFAULT_STATE));
+
+/* ---------- UTILS ---------- */
+const el = id => document.getElementById(id);
+const clamp = (v,a,b) => Math.min(b, Math.max(a, v));
+const rand = (a,b) => a + Math.random() * (b - a);
+const fmt = n => Math.round(n).toLocaleString('vi-VN');
+const todayStr = () => new Date().toDateString();
+
+function toast(msg) {
+  const n = el('notice');
+  if (!n) return;
+  el('notice-text').textContent = msg;
+  n.style.opacity = '1';
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => { n.style.opacity = '0'; }, 3200);
+}
+
+function flash(color) {
+  if (REDUCE_MOTION) return;
+  const f = el('flash');
+  f.style.background = 'radial-gradient(circle at 50% 55%, ' + color + ', rgba(0,0,0,0) 72%)';
+  f.classList.remove('go');
+  void f.offsetWidth;
+  f.classList.add('go');
+}
+
+let shakeAmount = 0;
+function shake(v) { if (REDUCE_MOTION) return; shakeAmount = Math.max(shakeAmount, v); }
+
+function floatText(text, worldPos, color) {
+  if (!camera || !worldPos) return;
+  const v = worldPos.clone().project(camera);
+  if (v.z > 1) return;
+  const x = (v.x * 0.5 + 0.5) * window.innerWidth;
+  const y = (-v.y * 0.5 + 0.5) * window.innerHeight;
+  const d = document.createElement('div');
+  d.className = 'float-text';
+  d.textContent = text;
+  d.style.left = x + 'px';
+  d.style.top = y + 'px';
+  d.style.color = color || '#fde047';
+  document.body.appendChild(d);
+  setTimeout(() => d.remove(), 1250);
+}
+
+function logEvent(text) {
+  gameState.activityLog = gameState.activityLog || [];
+  gameState.activityLog.unshift(text);
+  gameState.activityLog = gameState.activityLog.slice(0, 5);
+  renderActivity();
+}
+
+function renderActivity() {
+  const box = el('activity-list');
+  if (!box) return;
+  const list = gameState.activityLog || [];
+  box.innerHTML = list.length
+    ? list.map(t => '<div class="truncate">· ' + t + '</div>').join('')
+    : '<div class="text-slate-600">Chưa có hoạt động</div>';
+}
+
+/* ---------- AUDIO ---------- */
+class SoundEngine {
+  constructor() { this.ctx = null; this.muted = false; }
+
+  init() {
+    if (!this.ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      this.ctx = new AC();
+    }
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+  }
+
+  get ok() { return this.ctx && !this.muted; }
+
+  tone(freq, dur, type, vol, slideTo) {
+    if (!this.ok) return;
+    const t = this.ctx.currentTime;
+    const o = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    o.type = type || 'sine';
+    o.frequency.setValueAtTime(freq, t);
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(Math.max(20, slideTo), t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol || 0.18, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(this.ctx.destination);
+    o.start(t); o.stop(t + dur + 0.02);
+  }
+
+  click() { this.tone(720, 0.06, 'sine', 0.12, 260); }
+  press() { this.tone(190, 0.18, 'triangle', 0.22, 48); }
+  coin()  { [988,1319,1568].forEach((f,i) => setTimeout(() => this.tone(f, 0.22, 'sine', 0.16), i*55)); }
+
+  sizzle() {
+    if (!this.ok) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const len = Math.floor(ctx.sampleRate * 0.45);
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random()*2 - 1) * (1 - i/len);
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1500; bp.Q.value = 0.8;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.16, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.45);
+    src.connect(bp); bp.connect(g); g.connect(ctx.destination);
+    src.start();
+  }
+
+  powerUp()     { if (!this.ok) return; [220,330,440,660,880].forEach((f,i) => setTimeout(() => this.tone(f, 0.3, 'triangle', 0.16), i*70)); }
+  zitherChord() { if (!this.ok) return; [523.25,659.25,783.99,1046.5,1318.5].forEach((f,i) => setTimeout(() => this.tone(f, 0.9, 'sine', 0.11), i*90)); }
+  bassDrop()    { if (!this.ok) return; this.tone(120, 0.9, 'sine', 0.25, 32); setTimeout(() => this.tone(80, 1.1, 'sawtooth', 0.09, 28), 90); }
+  win()         { if (!this.ok) return; [523,659,784,1047,1319].forEach((f,i) => setTimeout(() => this.tone(f, 0.55, 'triangle', 0.14), i*110)); }
+  demon()       { if (!this.ok) return; this.tone(90, 1.2, 'sawtooth', 0.2, 30); setTimeout(() => this.tone(60, 0.8, 'square', 0.1, 25), 200); }
+
+  toggleMute() { this.muted = !this.muted; return this.muted; }
+}
+const audio = new SoundEngine();
+
+/* ---------- THREE ---------- */
+let scene, camera, renderer, controls, clock;
+let bunnyGroup, leftEar, rightEar, sunLight;
+const furMats = [];
+let tailGroup, hornGroup, lotusGroup, swordGroup, danOrbGroup, celestialRing, beamGroup;
+let auraPoints, auraLight, ambientMotes, rainPoints;
+let petGroup = null, apprenticeGroup = null, demonMesh = null;
+let cakeMeshes = [];
+let customers = [];
+let elapsed = 0;
+
+const BUNNY_POS = new THREE.Vector3(0, 0, -1.9);
+const MAX_AURA_PARTICLES = 300;
+const auraSeeds = new Float32Array(MAX_AURA_PARTICLES * 3);
+
+function init3D() {
+  const container = el('canvas-container');
+
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x05070f);
+  scene.fog = new THREE.FogExp2(0x05070f, 0.026);
+
+  camera = new THREE.PerspectiveCamera(46, window.innerWidth / window.innerHeight, 0.1, 220);
+  camera.position.set(0, 3.6, 7.4);
+
+  renderer = new THREE.WebGLRenderer({ antialias:true, powerPreference:'high-performance', preserveDrawingBuffer:true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.12;
+  if (THREE.sRGBEncoding) renderer.outputEncoding = THREE.sRGBEncoding;
+  container.appendChild(renderer.domElement);
+
+  controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.06;
+  controls.maxPolarAngle = Math.PI / 2.06;
+  controls.minPolarAngle = 0.15;
+  controls.minDistance = 3;
+  controls.maxDistance = 14;
+  controls.target.set(0, 1.15, -0.3);
+  controls.enablePan = false;
+
+  clock = new THREE.Clock();
+
+  buildLights();
+  buildGround();
+  buildCounter();
+  buildBunny();
+  buildLotus();
+  buildSwords();
+  buildDanOrbs();
+  buildCelestialRing();
+  buildBeam();
+  buildAuraParticles();
+  buildAmbientMotes();
+  buildRain();
+
+  window.addEventListener('resize', onResize);
+}
+
+function buildLights() {
+  scene.add(new THREE.AmbientLight(0xfff2e2, 0.62));
+  scene.add(new THREE.HemisphereLight(0xa5b4fc, 0x1f2937, 0.55));
+
+  sunLight = new THREE.DirectionalLight(0xfff4dc, 1.5);
+  sunLight.position.set(6, 13, 7);
+  sunLight.castShadow = true;
+  sunLight.shadow.mapSize.set(1024, 1024);
+  sunLight.shadow.camera.near = 1;
+  sunLight.shadow.camera.far = 40;
+  sunLight.shadow.camera.left = -10;
+  sunLight.shadow.camera.right = 10;
+  sunLight.shadow.camera.top = 10;
+  sunLight.shadow.camera.bottom = -10;
+  sunLight.shadow.bias = -0.0008;
+  scene.add(sunLight);
+
+  const rim = new THREE.PointLight(0xf472b6, 1.1, 14);
+  rim.position.set(-4, 3.2, 3.5);
+  scene.add(rim);
+
+  const rim2 = new THREE.PointLight(0x22d3ee, 0.9, 14);
+  rim2.position.set(4.5, 2.6, -3);
+  scene.add(rim2);
+
+  auraLight = new THREE.PointLight(0xfacc15, 0, 9, 2);
+  auraLight.position.set(BUNNY_POS.x, 1.5, BUNNY_POS.z);
+  scene.add(auraLight);
+}
+
+function buildGround() {
+  const floor = new THREE.Mesh(
+    new THREE.CircleGeometry(30, 64),
+    new THREE.MeshStandardMaterial({ color:0x0b1220, roughness:0.85, metalness:0.1 })
+  );
+  floor.rotation.x = -Math.PI / 2;
+  floor.receiveShadow = true;
+  scene.add(floor);
+
+  const ringMat = new THREE.MeshBasicMaterial({ color:0x38bdf8, transparent:true, opacity:0.22, side:THREE.DoubleSide, depthWrite:false });
+
+  const ring1 = new THREE.Mesh(new THREE.RingGeometry(3.05, 3.18, 96), ringMat);
+  ring1.rotation.x = -Math.PI / 2;
+  ring1.position.y = 0.012;
+  scene.add(ring1);
+
+  const ring2 = new THREE.Mesh(new THREE.RingGeometry(4.4, 4.47, 96), ringMat.clone());
+  ring2.material.opacity = 0.12;
+  ring2.rotation.x = -Math.PI / 2;
+  ring2.position.y = 0.012;
+  scene.add(ring2);
+
+  const spokeMat = new THREE.MeshBasicMaterial({ color:0xf472b6, transparent:true, opacity:0.14, side:THREE.DoubleSide, depthWrite:false });
+  for (let i = 0; i < 12; i++) {
+    const spoke = new THREE.Mesh(new THREE.PlaneGeometry(0.05, 1.2), spokeMat);
+    const ang = (i / 12) * Math.PI * 2;
+    spoke.rotation.x = -Math.PI / 2;
+    spoke.rotation.z = ang;
+    spoke.position.set(Math.cos(ang) * 3.75, 0.011, Math.sin(ang) * 3.75);
+    scene.add(spoke);
+  }
+
+  scene.userData.ring1 = ring1;
+  scene.userData.ring2 = ring2;
+}
+
+function buildCounter() {
+  const g = new THREE.Group();
+
+  const base = new THREE.Mesh(
+    new THREE.BoxGeometry(3.7, 1.1, 1.6),
+    new THREE.MeshStandardMaterial({ color:0x4a1220, roughness:0.55, metalness:0.15 })
+  );
+  base.position.y = 0.55;
+  base.castShadow = true; base.receiveShadow = true;
+  g.add(base);
+
+  const front = new THREE.Mesh(
+    new THREE.BoxGeometry(3.7, 0.14, 0.06),
+    new THREE.MeshStandardMaterial({ color:0xfacc15, metalness:0.85, roughness:0.25 })
+  );
+  front.position.set(0, 0.92, 0.81);
+  g.add(front);
+
+  const top = new THREE.Mesh(
+    new THREE.BoxGeometry(3.95, 0.12, 1.85),
+    new THREE.MeshStandardMaterial({ color:0xc9992f, roughness:0.42, metalness:0.5 })
+  );
+  top.position.y = 1.16;
+  top.castShadow = true; top.receiveShadow = true;
+  g.add(top);
+
+  const cloth = new THREE.Mesh(
+    new THREE.BoxGeometry(3.3, 0.02, 1.2),
+    new THREE.MeshStandardMaterial({ color:0x7f1d3a, roughness:0.95 })
+  );
+  cloth.position.set(0, 1.23, 0.12);
+  cloth.receiveShadow = true;
+  g.add(cloth);
+
+  [-1.9, 1.9].forEach(x => {
+    const post = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.06, 0.08, 2.5, 10),
+      new THREE.MeshStandardMaterial({ color:0x3f2a1d, roughness:0.8 })
+    );
+    post.position.set(x, 1.25, -0.75);
+    post.castShadow = true;
+    g.add(post);
+
+    const lantern = new THREE.Mesh(
+      new THREE.SphereGeometry(0.19, 14, 12),
+      new THREE.MeshStandardMaterial({ color:0xfb7185, emissive:0xe11d48, emissiveIntensity:1.5, roughness:0.4 })
+    );
+    lantern.position.set(x, 2.42, -0.75);
+    g.add(lantern);
+
+    const lp = new THREE.PointLight(0xfb7185, 0.75, 6);
+    lp.position.copy(lantern.position);
+    g.add(lp);
+  });
+
+  const awning = new THREE.Mesh(
+    new THREE.ConeGeometry(2.55, 1.1, 4),
+    new THREE.MeshStandardMaterial({ color:0xbe185d, roughness:0.55 })
+  );
+  awning.position.set(0, 3.35, -0.7);
+  awning.rotation.y = Math.PI / 4;
+  awning.castShadow = true;
+  g.add(awning);
+
+  g.position.z = 0.1;
+  scene.add(g);
+}
+
+function buildBunny() {
+  bunnyGroup = new THREE.Group();
+  bunnyGroup.position.set(BUNNY_POS.x, 0, BUNNY_POS.z);
+
+  const furMat = new THREE.MeshStandardMaterial({ color:0xffb6c1, roughness:0.88, metalness:0.0 });
+  furMats.push(furMat);
+
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.46, 28, 24), furMat);
+  body.scale.set(1.0, 1.08, 0.94);
+  body.position.y = 0.64;
+  body.castShadow = true;
+  bunnyGroup.add(body);
+
+  const belly = new THREE.Mesh(
+    new THREE.SphereGeometry(0.3, 20, 18),
+    new THREE.MeshStandardMaterial({ color:0xfff4f8, roughness:0.95 })
+  );
+  belly.scale.set(1, 0.95, 0.55);
+  belly.position.set(0, 0.6, 0.3);
+  bunnyGroup.add(belly);
+
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.43, 30, 26), furMat);
+  head.position.y = 1.36;
+  head.castShadow = true;
+  bunnyGroup.add(head);
+
+  [-1, 1].forEach(s => {
+    const cheek = new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 14), furMat);
+    cheek.position.set(0.19 * s, 1.24, 0.23);
+    cheek.scale.set(1, 0.85, 0.8);
+    bunnyGroup.add(cheek);
+  });
+
+  [-1, 1].forEach(s => {
+    const eye = new THREE.Mesh(
+      new THREE.SphereGeometry(0.062, 16, 14),
+      new THREE.MeshStandardMaterial({ color:0x09090b, roughness:0.15, metalness:0.2 })
+    );
+    eye.position.set(0.155 * s, 1.42, 0.36);
+    bunnyGroup.add(eye);
+
+    const shine = new THREE.Mesh(new THREE.SphereGeometry(0.024, 10, 8), new THREE.MeshBasicMaterial({ color:0xffffff }));
+    shine.position.set(0.155 * s + 0.022, 1.447, 0.405);
+    bunnyGroup.add(shine);
+
+    const blush = new THREE.Mesh(
+      new THREE.SphereGeometry(0.07, 12, 10),
+      new THREE.MeshBasicMaterial({ color:0xfb7185, transparent:true, opacity:0.65 })
+    );
+    blush.position.set(0.25 * s, 1.3, 0.315);
+    blush.scale.set(1, 0.62, 0.35);
+    bunnyGroup.add(blush);
+  });
+
+  const nose = new THREE.Mesh(
+    new THREE.SphereGeometry(0.036, 12, 10),
+    new THREE.MeshStandardMaterial({ color:0xf472b6, roughness:0.5 })
+  );
+  nose.position.set(0, 1.325, 0.415);
+  bunnyGroup.add(nose);
+
+  const earGeo = new THREE.CylinderGeometry(0.075, 0.115, 0.98, 16);
+  earGeo.translate(0, 0.49, 0);
+  earGeo.scale(1, 1, 0.62);
+
+  leftEar = new THREE.Mesh(earGeo, furMat);
+  leftEar.position.set(-0.165, 1.68, 0);
+  leftEar.rotation.z = 0.3;
+  leftEar.rotation.x = -0.08;
+  leftEar.castShadow = true;
+  bunnyGroup.add(leftEar);
+
+  rightEar = new THREE.Mesh(earGeo, furMat);
+  rightEar.position.set(0.165, 1.68, 0);
+  rightEar.rotation.z = -0.3;
+  rightEar.rotation.x = -0.08;
+  rightEar.castShadow = true;
+  bunnyGroup.add(rightEar);
+
+  const innerGeo = new THREE.CylinderGeometry(0.04, 0.07, 0.8, 14);
+  innerGeo.translate(0, 0.42, 0);
+  innerGeo.scale(1, 1, 0.4);
+  const innerMat = new THREE.MeshStandardMaterial({ color:0xff8fb8, roughness:0.9 });
+
+  const innerL = new THREE.Mesh(innerGeo, innerMat);
+  innerL.position.set(0, 0.05, 0.055);
+  leftEar.add(innerL);
+
+  const innerR = new THREE.Mesh(innerGeo, innerMat);
+  innerR.position.set(0, 0.05, 0.055);
+  rightEar.add(innerR);
+
+  [-1, 1].forEach(s => {
+    const arm = new THREE.Mesh(new THREE.SphereGeometry(0.13, 16, 14), furMat);
+    arm.scale.set(0.85, 1.15, 0.85);
+    arm.position.set(0.44 * s, 0.72, 0.06);
+    arm.castShadow = true;
+    bunnyGroup.add(arm);
+  });
+
+  [-1, 1].forEach(s => {
+    const foot = new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 14), furMat);
+    foot.scale.set(1, 0.55, 1.35);
+    foot.position.set(0.21 * s, 0.09, 0.16);
+    foot.castShadow = true;
+    bunnyGroup.add(foot);
+  });
+
+  const puff = new THREE.Mesh(new THREE.SphereGeometry(0.13, 14, 12), furMat);
+  puff.position.set(0, 0.58, -0.44);
+  bunnyGroup.add(puff);
+
+  const hatBase = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.2, 0.235, 0.16, 20),
+    new THREE.MeshStandardMaterial({ color:0xf8fafc, roughness:0.85 })
+  );
+  hatBase.position.set(0, 1.76, 0);
+  bunnyGroup.add(hatBase);
+
+  const hatTop = new THREE.Mesh(
+    new THREE.SphereGeometry(0.235, 20, 16),
+    new THREE.MeshStandardMaterial({ color:0xffffff, roughness:0.9 })
+  );
+  hatTop.scale.set(1, 0.72, 1);
+  hatTop.position.set(0, 1.86, 0);
+  hatTop.castShadow = true;
+  bunnyGroup.add(hatTop);
+
+  tailGroup = new THREE.Group();
+  tailGroup.position.set(0, 1.0, -0.34);
+  const tailGeo = new THREE.ConeGeometry(0.1, 0.95, 12);
+  tailGeo.translate(0, 0.48, 0);
+  for (let i = 0; i < 9; i++) {
+    const pivot = new THREE.Group();
+    pivot.rotation.y = (i - 4) * 0.23;
+    const t = new THREE.Mesh(tailGeo, furMat);
+    t.rotation.x = -1.15;
+    t.castShadow = true;
+    pivot.add(t);
+    pivot.userData.baseAngle = (i - 4) * 0.23;
+    tailGroup.add(pivot);
+  }
+  tailGroup.visible = false;
+  bunnyGroup.add(tailGroup);
+
+  hornGroup = new THREE.Group();
+  const hornMat = new THREE.MeshStandardMaterial({ color:0xffd700, metalness:0.95, roughness:0.18, emissive:0x4a3200, emissiveIntensity:0.8 });
+  [-1, 1].forEach(s => {
+    const horn = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.42, 10), hornMat);
+    horn.position.set(0.2 * s, 1.72, -0.03);
+    horn.rotation.z = -0.35 * s;
+    horn.rotation.x = -0.25;
+    hornGroup.add(horn);
+  });
+  hornGroup.visible = false;
+  bunnyGroup.add(hornGroup);
+
+  scene.add(bunnyGroup);
+}
+
+function buildLotus() {
+  lotusGroup = new THREE.Group();
+  lotusGroup.position.set(BUNNY_POS.x, 0.03, BUNNY_POS.z);
+
+  const baseMat = new THREE.MeshStandardMaterial({ color:0xf9a8d4, roughness:0.5, metalness:0.25, emissive:0x4a1030, emissiveIntensity:0.5 });
+  const tipMat  = new THREE.MeshStandardMaterial({ color:0xffffff, roughness:0.35, metalness:0.45, emissive:0x5a4200, emissiveIntensity:0.7 });
+
+  const disc = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.95, 0.1, 24), tipMat);
+  disc.position.y = 0.05;
+  disc.receiveShadow = true;
+  lotusGroup.add(disc);
+
+  for (let ring = 0; ring < 3; ring++) {
+    const count = 8 + ring * 2;
+    for (let i = 0; i < count; i++) {
+      const petal = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.42, 8), ring === 1 ? tipMat : baseMat);
+      const ang = (i / count) * Math.PI * 2 + ring * 0.35;
+      const r = 0.55 + ring * 0.14;
+      petal.position.set(Math.cos(ang) * r, 0.12 + ring * 0.03, Math.sin(ang) * r);
+      petal.rotation.z = Math.cos(ang) * 0.85;
+      petal.rotation.x = -Math.sin(ang) * 0.85;
+      petal.castShadow = true;
+      lotusGroup.add(petal);
+    }
+  }
+
+  lotusGroup.visible = false;
+  scene.add(lotusGroup);
+}
+
+function buildSwords() {
+  swordGroup = new THREE.Group();
+  swordGroup.position.set(BUNNY_POS.x, 1.05, BUNNY_POS.z);
+
+  const bladeMat = new THREE.MeshStandardMaterial({ color:0x7dd3fc, metalness:0.95, roughness:0.12, emissive:0x0ea5e9, emissiveIntensity:1.6 });
+  const goldMat  = new THREE.MeshStandardMaterial({ color:0xfacc15, metalness:0.95, roughness:0.2, emissive:0x4a3200, emissiveIntensity:0.9 });
+
+  for (let i = 0; i < 8; i++) {
+    const sw = new THREE.Group();
+    const ang = (i / 8) * Math.PI * 2;
+
+    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.6, 0.012), bladeMat);
+    blade.position.y = 0.4;
+    sw.add(blade);
+
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.032, 0.12, 4), bladeMat);
+    tip.position.y = 0.76;
+    sw.add(tip);
+
+    const guard = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.03, 0.045), goldMat);
+    guard.position.y = 0.1;
+    sw.add(guard);
+
+    const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.18, 8), goldMat);
+    grip.position.y = -0.02;
+    sw.add(grip);
+
+    sw.position.set(Math.cos(ang) * 1.28, 0, Math.sin(ang) * 1.28);
+    sw.rotation.y = -ang;
+    sw.userData.phase = i * 0.7;
+    swordGroup.add(sw);
+  }
+
+  swordGroup.visible = false;
+  scene.add(swordGroup);
+}
+
+function buildDanOrbs() {
+  danOrbGroup = new THREE.Group();
+  danOrbGroup.position.set(BUNNY_POS.x, 1.15, BUNNY_POS.z);
+
+  const mat = new THREE.MeshStandardMaterial({ color:0xfde047, metalness:0.9, roughness:0.15, emissive:0xfacc15, emissiveIntensity:2 });
+  for (let i = 0; i < 6; i++) {
+    const orb = new THREE.Mesh(new THREE.SphereGeometry(0.06, 12, 10), mat);
+    const ang = (i / 6) * Math.PI * 2;
+    orb.position.set(Math.cos(ang) * 0.78, 0, Math.sin(ang) * 0.78);
+    danOrbGroup.add(orb);
+  }
+
+  danOrbGroup.visible = false;
+  scene.add(danOrbGroup);
+}
+
+function buildCelestialRing() {
+  celestialRing = new THREE.Group();
+  celestialRing.position.set(BUNNY_POS.x, 0.07, BUNNY_POS.z);
+
+  const mat  = new THREE.MeshBasicMaterial({ color:0xa78bfa, transparent:true, opacity:0.4, side:THREE.DoubleSide, depthWrite:false });
+  const mat2 = new THREE.MeshBasicMaterial({ color:0x22d3ee, transparent:true, opacity:0.3, side:THREE.DoubleSide, depthWrite:false });
+
+  const r1 = new THREE.Mesh(new THREE.RingGeometry(1.55, 1.72, 80), mat);
+  r1.rotation.x = -Math.PI / 2;
+  celestialRing.add(r1);
+
+  const r2 = new THREE.Mesh(new THREE.RingGeometry(1.9, 1.96, 80), mat2);
+  r2.rotation.x = -Math.PI / 2;
+  celestialRing.add(r2);
+
+  for (let i = 0; i < 16; i++) {
+    const rune = new THREE.Mesh(new THREE.PlaneGeometry(0.09, 0.26), mat.clone());
+    rune.material.opacity = 0.55;
+    const ang = (i / 16) * Math.PI * 2;
+    rune.position.set(Math.cos(ang) * 1.36, 0.01, Math.sin(ang) * 1.36);
+    rune.rotation.x = -Math.PI / 2;
+    rune.rotation.z = -ang;
+    celestialRing.add(rune);
+  }
+
+  celestialRing.visible = false;
+  scene.add(celestialRing);
+}
+
+function buildBeam() {
+  beamGroup = new THREE.Group();
+  beamGroup.position.set(BUNNY_POS.x, 0, BUNNY_POS.z);
+
+  const beamMat = new THREE.MeshBasicMaterial({
+    color:0xfff3b0, transparent:true, opacity:0.2,
+    blending:THREE.AdditiveBlending, side:THREE.DoubleSide, depthWrite:false
+  });
+
+  const core = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.13, 16, 24, 1, true), beamMat);
+  core.position.y = 9.6;
+  beamGroup.add(core);
+
+  const outerMat = beamMat.clone();
+  outerMat.opacity = 0.09;
+  outerMat.color = new THREE.Color(0x22d3ee);
+  const outer = new THREE.Mesh(new THREE.CylinderGeometry(0.95, 0.3, 17, 24, 1, true), outerMat);
+  outer.position.y = 10.2;
+  beamGroup.add(outer);
+
+  const glow = new THREE.PointLight(0xfff3b0, 2.2, 12);
+  glow.position.y = 2.4;
+  beamGroup.add(glow);
+
+  beamGroup.userData.core = core;
+  beamGroup.userData.outer = outer;
+  beamGroup.visible = false;
+  scene.add(beamGroup);
+}
+
+function buildAuraParticles() {
+  for (let i = 0; i < MAX_AURA_PARTICLES; i++) {
+    auraSeeds[i*3]     = Math.random();
+    auraSeeds[i*3 + 1] = Math.random();
+    auraSeeds[i*3 + 2] = Math.random();
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(MAX_AURA_PARTICLES * 3), 3));
+  geo.setDrawRange(0, 0);
+
+  const mat = new THREE.PointsMaterial({
+    color:0xfacc15, size:0.085, transparent:true, opacity:0.95,
+    depthWrite:false, blending:THREE.AdditiveBlending, sizeAttenuation:true
+  });
+
+  auraPoints = new THREE.Points(geo, mat);
+  auraPoints.frustumCulled = false;
+  scene.add(auraPoints);
+}
+
+function buildAmbientMotes() {
+  const N = 120;
+  const pos = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++) {
+    pos[i*3]     = rand(-9, 9);
+    pos[i*3 + 1] = rand(0.3, 7);
+    pos[i*3 + 2] = rand(-9, 9);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+
+  const mat = new THREE.PointsMaterial({
+    color:0xa5b4fc, size:0.045, transparent:true, opacity:0.5,
+    depthWrite:false, blending:THREE.AdditiveBlending, sizeAttenuation:true
+  });
+
+  ambientMotes = new THREE.Points(geo, mat);
+  scene.add(ambientMotes);
+}
+
+function buildRain() {
+  const N = 400;
+  const pos = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++) {
+    pos[i*3]     = rand(-11, 11);
+    pos[i*3 + 1] = rand(0, 13);
+    pos[i*3 + 2] = rand(-11, 11);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+
+  const mat = new THREE.PointsMaterial({
+    color:0x7dd3fc, size:0.06, transparent:true, opacity:0.5,
+    depthWrite:false, sizeAttenuation:true
+  });
+
+  rainPoints = new THREE.Points(geo, mat);
+  rainPoints.visible = false;
+  scene.add(rainPoints);
+}
+
+/* ---------- CAKES ---------- */
+function capacity() {
+  return clamp(gameState.upgrades.counterSlots + 2, 3, 8);
+}
+
+function slotPosition(index, cap) {
+  const span = Math.min(3.3, 0.5 * Math.max(cap, 1));
+  const step = cap > 1 ? span / (cap - 1) : 0;
+  return new THREE.Vector3(-span / 2 + index * step, 1.245, 0.14);
+}
+
+function makeCakeMesh(cake) {
+  const g = new THREE.Group();
+  const quality = clamp((cake.score || 0) / 100, 0, 1);
+  const crustColor = new THREE.Color(0xc9801f).lerp(new THREE.Color(0xffd76a), quality);
+
+  const body = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.2, 0.22, 0.14, 20),
+    new THREE.MeshStandardMaterial({
+      color:crustColor, roughness:0.65, metalness:0.05,
+      emissive: quality > 0.9 ? 0x8a6100 : 0x000000,
+      emissiveIntensity: quality > 0.9 ? 0.7 : 0
+    })
+  );
+  body.position.y = 0.07;
+  body.castShadow = true;
+  g.add(body);
+
+  const banana = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.1, 0.1, 0.05, 14),
+    new THREE.MeshStandardMaterial({ color:0xfde68a, roughness:0.55, emissive:0x6b5200, emissiveIntensity:0.35 })
+  );
+  banana.position.y = 0.16;
+  g.add(banana);
+
+  const glaze = new THREE.Mesh(
+    new THREE.TorusGeometry(0.14, 0.017, 8, 22),
+    new THREE.MeshStandardMaterial({ color:0xfff7d6, roughness:0.35, metalness:0.2 })
+  );
+  glaze.rotation.x = -Math.PI / 2;
+  glaze.position.y = 0.13;
+  g.add(glaze);
+
+  if (quality > 0.9) g.add(new THREE.PointLight(0xffe066, 0.6, 1.6));
+
+  return g;
+}
+
+function disposeGroup(g) {
+  if (!g) return;
+  scene.remove(g);
+  g.traverse(o => {
+    if (o.geometry) o.geometry.dispose();
+    if (o.material) {
+      if (Array.isArray(o.material)) o.material.forEach(m => m.dispose());
+      else o.material.dispose();
+    }
+  });
+}
+
+function syncCakeMeshes() {
+  cakeMeshes.forEach(m => disposeGroup(m));
+  cakeMeshes = [];
+
+  const cap = capacity();
+  gameState.cakes.slice(0, 8).forEach((cake, i) => {
+    if (i >= cap) return;
+    const mesh = makeCakeMesh(cake);
+    mesh.position.copy(slotPosition(i, cap));
+    mesh.rotation.y = i * 0.55;
+    scene.add(mesh);
+    cakeMeshes.push(mesh);
+  });
+}
+
+/* ---------- VISUALS ---------- */
+function applyWeatherVisuals() {
+  if (!scene) return;
+  const map = {
+    clear:     { bg:0x05070f, fog:0.026, sun:1.5 },
+    rain:      { bg:0x060a14, fog:0.034, sun:1.1 },
+    storm:     { bg:0x08060c, fog:0.042, sun:0.9 },
+    bloodmoon: { bg:0x160510, fog:0.030, sun:1.2 },
+    starfall:  { bg:0x04070f, fog:0.020, sun:1.7 }
+  };
+  const c = map[gameState.weather] || map.clear;
+  scene.background.setHex(c.bg);
+  if (scene.fog) { scene.fog.color.setHex(c.bg); scene.fog.density = c.fog; }
+  if (sunLight) sunLight.intensity = c.sun;
+}
+
+function applyVisuals() {
+  if (!scene) return;
+
+  const skin = SKINS[gameState.skin] || SKINS.pink_classic;
+
+  furMats.forEach(m => {
+    m.color.setHex(skin.color);
+    if (m.emissive) {
+      m.emissive.setHex(skin.emissive || 0x000000);
+      m.emissiveIntensity = skin.emissive ? 0.6 : 0;
+    }
+    m.metalness = skin.metal || 0;
+    m.roughness = skin.metal ? 0.28 : 0.88;
+  });
+
+  if (tailGroup) tailGroup.visible = !!skin.tails;
+  if (hornGroup) hornGroup.visible = !!skin.horns;
+
+  const r = gameState.realm;
+  if (lotusGroup)    lotusGroup.visible    = r >= 1;
+  if (danOrbGroup)   danOrbGroup.visible   = r >= 2;
+  if (swordGroup)    swordGroup.visible    = r >= 3 || gameState.skin === 'long_vu_quan';
+  if (celestialRing) celestialRing.visible = r >= 4;
+  if (beamGroup)     beamGroup.visible     = r >= 5;
+
+  if (bunnyGroup) {
+    const target = 1 + r * 0.05;
+    bunnyGroup.scale.setScalar(target);
+  }
+
+  buildApprenticeVisual();
+  buildPetVisual();
+  applyWeatherVisuals();
+  syncCakeMeshes();
+}
+
+/* ---------- APPRENTICE ---------- */
+function buildApprenticeVisual() {
+  if (apprenticeGroup) { disposeGroup(apprenticeGroup); apprenticeGroup = null; }
+  if (!gameState.hasApprentice || !scene) return;
+
+  const g = new THREE.Group();
+  const robeMat = new THREE.MeshStandardMaterial({ color:0x1d4ed8, roughness:0.6 });
+
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.27, 0.82, 14), robeMat);
+  body.position.y = 0.5;
+  body.castShadow = true;
+  g.add(body);
+
+  const head = new THREE.Mesh(
+    new THREE.SphereGeometry(0.21, 16, 14),
+    new THREE.MeshStandardMaterial({ color:0xffd9b0, roughness:0.7 })
+  );
+  head.position.y = 1.06;
+  head.castShadow = true;
+  g.add(head);
+
+  const eyeMat = new THREE.MeshBasicMaterial({ color:0x111111 });
+  [-0.07, 0.07].forEach(x => {
+    const e = new THREE.Mesh(new THREE.SphereGeometry(0.022, 8, 8), eyeMat);
+    e.position.set(x, 1.09, 0.19);
+    g.add(e);
+  });
+
+  const cap = new THREE.Mesh(
+    new THREE.ConeGeometry(0.22, 0.28, 12),
+    new THREE.MeshStandardMaterial({ color:0x1e3a8a, roughness:0.5 })
+  );
+  cap.position.y = 1.28;
+  g.add(cap);
+
+  g.position.set(1.65, 0.02, -1.55);
+  g.rotation.y = -0.4;
+
+  scene.add(g);
+  apprenticeGroup = g;
+}
+
+/* ---------- PET ---------- */
+function buildPetVisual() {
+  if (petGroup) { disposeGroup(petGroup); petGroup = null; }
+  if (!gameState.pet || !scene) return;
+
+  const cfg = PETS[gameState.pet];
+  const g = new THREE.Group();
+
+  const mat = new THREE.MeshStandardMaterial({
+    color: cfg.color, roughness:0.7, emissive: cfg.color, emissiveIntensity:0.25
+  });
+
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.13, 14, 12), mat);
+  body.scale.set(1, 0.85, 1.35);
+  g.add(body);
+
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 10), mat);
+  head.position.set(0, 0.09, 0.13);
+  g.add(head);
+
+  [-0.045, 0.045].forEach(x => {
+    const ear = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.09, 8), mat);
+    ear.position.set(x, 0.17, 0.12);
+    g.add(ear);
+  });
+
+  const eyeMat = new THREE.MeshBasicMaterial({ color:0x0b0b0b });
+  [-0.035, 0.035].forEach(x => {
+    const e = new THREE.Mesh(new THREE.SphereGeometry(0.016, 8, 8), eyeMat);
+    e.position.set(x, 0.1, 0.2);
+    g.add(e);
+  });
+
+  g.add(new THREE.PointLight(cfg.color, 0.5, 2));
+
+  scene.add(g);
+  petGroup = g;
+  petGroup.userData.orbit = 0;
+}
+
+/* ---------- CUSTOMERS ---------- */
+const CUSTOMER_COLORS = [0x3b82f6, 0x10b981, 0x8b5cf6, 0xf59e0b, 0xec4899, 0x14b8a6];
+
+function makeCustomerMesh(star) {
+  const g = new THREE.Group();
+  const color = CUSTOMER_COLORS[Math.floor(Math.random() * CUSTOMER_COLORS.length)];
+
+  const bodyMat = new THREE.MeshStandardMaterial({ color: star ? 0x0a0a0a : color, roughness: star ? 0.35 : 0.6 });
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.28, 0.92, 14), bodyMat);
+  body.position.y = 0.55;
+  body.castShadow = true;
+  if (star) body.scale.set(1, 1, 0.75);
+  g.add(body);
+
+  const head = new THREE.Mesh(
+    new THREE.SphereGeometry(0.26, 18, 16),
+    new THREE.MeshStandardMaterial({ color:0xffd9b0, roughness:0.7 })
+  );
+  head.position.y = 1.24;
+  head.castShadow = true;
+  g.add(head);
+
+  const eyeMat = new THREE.MeshBasicMaterial({ color:0x111111 });
+  [-0.09, 0.09].forEach(x => {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.026, 8, 8), eyeMat);
+    eye.position.set(x, 1.27, 0.235);
+    g.add(eye);
+  });
+
+  const legMat = new THREE.MeshStandardMaterial({ color: star ? 0x050505 : 0x1e293b, roughness:0.6 });
+  const armMat = new THREE.MeshStandardMaterial({ color: star ? 0x0a0a0a : color, roughness:0.6 });
+
+  const leftArm = new THREE.Group();
+  leftArm.position.set(-0.29, 0.84, 0);
+  const laMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.55, 8), armMat);
+  laMesh.position.y = -0.26;
+  leftArm.add(laMesh);
+  g.add(leftArm);
+
+  const rightArm = leftArm.clone();
+  rightArm.position.x = 0.29;
+  g.add(rightArm);
+
+  const leftLeg = new THREE.Group();
+  leftLeg.position.set(-0.12, 0.14, 0);
+  const llMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.085, 0.44, 8), legMat);
+  llMesh.position.y = -0.2;
+  leftLeg.add(llMesh);
+  g.add(leftLeg);
+
+  const rightLeg = leftLeg.clone();
+  rightLeg.position.x = 0.12;
+  g.add(rightLeg);
+
+  if (star) {
+    const shirt = new THREE.Mesh(
+      new THREE.BoxGeometry(0.1, 0.5, 0.03),
+      new THREE.MeshStandardMaterial({ color:0xf8fafc, roughness:0.5 })
+    );
+    shirt.position.set(0, 0.66, 0.15);
+    g.add(shirt);
+
+    const tie = new THREE.Mesh(
+      new THREE.BoxGeometry(0.05, 0.3, 0.02),
+      new THREE.MeshStandardMaterial({ color:0xd9b45b, metalness:0.5, roughness:0.3 })
+    );
+    tie.position.set(0, 0.66, 0.175);
+    g.add(tie);
+
+    const brim = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.33, 0.33, 0.03, 22),
+      new THREE.MeshStandardMaterial({ color:0x050505, roughness:0.45 })
+    );
+    brim.position.y = 1.47;
+    g.add(brim);
+
+    const crown = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.2, 0.23, 0.26, 18),
+      new THREE.MeshStandardMaterial({ color:0x080808, roughness:0.45 })
+    );
+    crown.position.y = 1.6;
+    g.add(crown);
+
+    const glove = new THREE.Mesh(
+      new THREE.SphereGeometry(0.095, 12, 10),
+      new THREE.MeshStandardMaterial({ color:0xffffff, roughness:0.45 })
+    );
+    glove.position.set(-0.3, 0.28, 0.02);
+    g.add(glove);
+
+    const shoeMat = new THREE.MeshStandardMaterial({ color:0x050505, roughness:0.25 });
+    [-0.12, 0.12].forEach(x => {
+      const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.08, 0.3), shoeMat);
+      shoe.position.set(x, 0.02, 0.09);
+      g.add(shoe);
+    });
+  }
+
+  return { group:g, leftArm, rightArm, leftLeg, rightLeg };
+}
+
+class Customer {
+  constructor(star) {
+    this.star = !!star;
+    this.state = 'IN';
+    this.timer = 0;
+    this.patience = 26;
+    this.phase = Math.random() * Math.PI * 2;
+    this.dead = false;
+
+    const built = makeCustomerMesh(this.star);
+    this.mesh = built.group;
+    this.leftArm = built.leftArm;
+    this.rightArm = built.rightArm;
+    this.leftLeg = built.leftLeg;
+    this.rightLeg = built.rightLeg;
+
+    this.stopZ = rand(2.15, 2.55);
+    this.mesh.position.set(rand(-2.1, 2.1), 0.02, rand(8.5, 10.5));
+    this.mesh.rotation.y = Math.PI;
+    this.targetX = this.mesh.position.x * 0.55;
+
+    scene.add(this.mesh);
+  }
+
+  update(dt, t) {
+    const p = this.mesh.position;
+
+    if (this.star) {
+      const w = t * 5.4;
+      this.leftLeg.rotation.x  = Math.sin(w) * 0.4;
+      this.rightLeg.rotation.x = Math.sin(w + Math.PI) * 0.4;
+      this.leftArm.rotation.x  = -0.4 + Math.sin(w * 0.5) * 0.12;
+      this.rightArm.rotation.x =  0.2 + Math.sin(w * 0.5 + 1) * 0.12;
+      this.mesh.rotation.z = Math.sin(w * 0.5) * 0.05;
+    } else {
+      const w = t * 6 + this.phase;
+      this.leftLeg.rotation.x  = Math.sin(w) * 0.35;
+      this.rightLeg.rotation.x = Math.sin(w + Math.PI) * 0.35;
+      this.leftArm.rotation.x  = Math.sin(w + Math.PI) * 0.25;
+      this.rightArm.rotation.x = Math.sin(w) * 0.25;
+    }
+
+    if (this.state === 'IN') {
+      p.z -= dt * (this.star ? 0.85 : 1.1);
+      p.x += (this.targetX - p.x) * Math.min(1, dt * 2.2);
+      if (p.z <= this.stopZ) { this.state = 'WAIT'; this.timer = 0; }
+
+    } else if (this.state === 'WAIT') {
+      p.z = this.stopZ + Math.sin(t * 1.6 + this.phase) * (this.star ? 0.1 : 0.03);
+      this.timer += dt;
+      this.patience -= dt;
+      if (this.timer > 0.8) attemptSale(this);
+      if (this.patience <= 0) this.state = 'OUT';
+
+    } else if (this.state === 'OUT') {
+      p.z += dt * 1.6;
+      this.mesh.rotation.y = 0;
+      if (p.z > 12) this.dead = true;
+    }
+  }
+
+  dispose() {
+    disposeGroup(this.mesh);
+  }
+}
+
+let lastSpawn = 0;
+let spawnCount = 0;
+let starSpawned = false;
+
+function trySpawnCustomer(t) {
+  const w = WEATHERS[gameState.weather] || WEATHERS.clear;
+  let interval = 9.5 / (1 + (gameState.upgrades.marketing - 1) * 0.15) / w.cust;
+  if (gameState.pet === 'koi') interval *= 0.9;
+
+  if (t - lastSpawn < interval) return;
+  if (customers.length >= 5) return;
+
+  lastSpawn = t;
+  spawnCount++;
+
+  const isStar = (!starSpawned && spawnCount >= 2) || (starSpawned && Math.random() < 0.08);
+  if (isStar) {
+    starSpawned = true;
+    toast('🕴️ Michael Jackson ghé mua bánh — moonwalk đỉnh cao!');
+    logEvent('🕴️ Khách đặc biệt: moonwalk star');
+    audio.zitherChord();
+  }
+
+  customers.push(new Customer(isStar));
+}
+
+/* ---------- ECONOMY ---------- */
+function bakeCost() {
+  const m = gameState.market || BASE_MARKET;
+  let cost = (m.banana || 4) + (m.flour || 3) + (m.oil || 3);
+  if (gameState.pet === 'turtle') cost = Math.round(cost * 0.85);
+  return Math.max(1, cost);
+}
+
+function cakePrice(total) {
+  const mult = REALMS[gameState.realm].mult;
+  const qualityMul = 1 + (gameState.upgrades.bananaQuality - 1) * 0.12;
+  const petMul = gameState.pet === 'fox' ? 1.05 : 1;
+  const daoMul = 1 + (gameState.daoHeart || 0) * 0.05;
+  const wMul = (WEATHERS[gameState.weather] || WEATHERS.clear).price;
+  return Math.round((25 + total * 1.6) * mult * qualityMul * petMul * daoMul * wMul);
+}
+
+function rollMarket() {
+  const m = {};
+  Object.keys(BASE_MARKET).forEach(k => {
+    m[k] = Math.max(1, Math.round(BASE_MARKET[k] * rand(0.6, 1.5)));
+  });
+  gameState.market = m;
+}
+
+function rollWeather() {
+  const pool = ['clear','clear','rain','storm','starfall','bloodmoon'];
+  gameState.weather = pool[Math.floor(Math.random() * pool.length)];
+  gameState.starUsed = false;
+}
+
+function sellOneCake(silent) {
+  if (!gameState.cakes.length) return false;
+
+  const cake = gameState.cakes.shift();
+  gameState.money += cake.price;
+  gameState.dayEarnings += cake.price;
+  gameState.totalSold++;
+  gameState.totalServed++;
+  gameState.dayStats.sold++;
+  gameState.dayStats.served++;
+  gameState.dayStats.earn += cake.price;
+
+  if (gameState.totalSold % 5 === 0) gameState.gems += 1;
+
+  syncCakeMeshes();
+  updateHUD();
+  checkQuests();
+  saveGame(false);
+
+  if (!silent) audio.coin();
+  return true;
+}
+
+function attemptSale(customer) {
+  if (!gameState.cakes.length) return;
+
+  const price = gameState.cakes[0].price || 0;
+  customer.state = 'OUT';
+  customer.timer = 0;
+
+  gameState.cakes.shift();
+  gameState.money += price;
+  gameState.dayEarnings += price;
+  gameState.totalSold++;
+  gameState.totalServed++;
+  gameState.dayStats.sold++;
+  gameState.dayStats.served++;
+  gameState.dayStats.earn += price;
+
+  if (gameState.totalSold % 5 === 0) {
+    gameState.gems += 1;
+    toast('💎 Bán đủ bội số 5 — nhận 1 Kim Cương!');
+  }
+
+  audio.coin();
+
+  const wp = customer.mesh.position.clone();
+  wp.y += 1.9;
+  floatText('+' + fmt(price) + ' 💰', wp, gameState.realm >= 4 ? '#fde047' : '#a7f3d0');
+  coinBurst(new THREE.Vector3(0, 1.5, 0.4));
+
+  syncCakeMeshes();
+  updateHUD();
+  checkQuests();
+  saveGame(false);
+}
+
+/* ---------- COIN BURST ---------- */
+function coinBurst(pos) {
+  if (REDUCE_MOTION) return;
+  const geo = new THREE.CylinderGeometry(0.035, 0.035, 0.008, 10);
+  const mat = new THREE.MeshStandardMaterial({ color:0xfacc15, metalness:0.9, roughness:0.2, emissive:0xfacc15, emissiveIntensity:0.6 });
+
+  for (let i = 0; i < 10; i++) {
+    const c = new THREE.Mesh(geo, mat);
+    c.position.copy(pos);
+    scene.add(c);
+
+    const vel = new THREE.Vector3(rand(-0.9, 0.9), rand(1.6, 2.8), rand(-0.9, 0.9));
+    const start = performance.now();
+
+    const tick = () => {
+      const e = (performance.now() - start) / 900;
+      if (e >= 1) {
+        scene.remove(c);
+        geo.dispose(); mat.dispose();
+        return;
+      }
+      c.position.addScaledVector(vel, 0.016 * (1 - e));
+      vel.y -= 0.09;
+      c.rotation.x += 0.2;
+      requestAnimationFrame(tick);
+    };
+    tick();
+  }
+}
+
+/* ---------- DEMON BOSS ---------- */
+const demon = { active:false, time:0, total:14, cool:0 };
+
+function spawnDemon() {
+  demon.active = true;
+  demon.time = 14;
+  demon.total = 14;
+
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color:0x4c1d95, emissive:0x7c3aed, emissiveIntensity:1.2, roughness:0.4 });
+
+  const body = new THREE.Mesh(new THREE.ConeGeometry(0.42, 1.7, 8), mat);
+  body.position.y = 0.85;
+  body.castShadow = true;
+  g.add(body);
+
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.26, 14, 12), mat);
+  head.position.y = 1.85;
+  g.add(head);
+
+  [-0.1, 0.1].forEach(x => {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.05, 10, 8), new THREE.MeshBasicMaterial({ color:0xff3b3b }));
+    eye.position.set(x, 1.9, 0.22);
+    g.add(eye);
+  });
+
+  [-1, 1].forEach(s => {
+    const horn = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.3, 8), mat);
+    horn.position.set(0.16 * s, 2.1, 0);
+    horn.rotation.z = -0.4 * s;
+    g.add(horn);
+  });
+
+  g.add(new THREE.PointLight(0xa855f7, 2.4, 8));
+
+  g.position.set(rand(-1.6, 1.6), 0.02, 6.5);
+  scene.add(g);
+  demonMesh = g;
+
+  el('demon-banner').classList.remove('hidden');
+  el('demon-bar').style.width = '100%';
+  el('demon-count').textContent = '14s';
+
+  audio.demon();
+  flash('#7c3aed');
+  shake(0.7);
+  toast('👹 THẦN MA VẠN GIỚI XUẤT HIỆN! Dâng bánh ngay!');
+  logEvent('👹 Ma đầu xuất hiện');
+}
+
+function endDemon() {
+  demon.active = false;
+  if (demonMesh) { disposeGroup(demonMesh); demonMesh = null; }
+  el('demon-banner').classList.add('hidden');
+}
+
+function serveDemon() {
+  if (!demon.active) return;
+
+  if (!gameState.cakes.length) {
+    toast('⚠️ Không có bánh để dâng! Mau làm bánh!');
+    return;
+  }
+
+  gameState.cakes.shift();
+  syncCakeMeshes();
+
+  gameState.gems += 2;
+  endDemon();
+  audio.win();
+  flash('#fde047');
+  toast('⚔️ Đã xoa dịu ma đầu! +2 💎');
+  logEvent('⚔️ Dâng bánh cho ma đầu +2 💎');
+
+  updateHUD();
+  checkQuests();
+  saveGame(false);
+}
+
+function demonFail() {
+  if (!demon.active) return;
+
+  if (gameState.cakes.length) {
+    gameState.cakes.pop();
+    syncCakeMeshes();
+    toast('💀 Ma đầu cướp mất 1 chiếc bánh!');
+    logEvent('💀 Ma đầu cướp 1 bánh');
+  } else {
+    const lost = Math.min(gameState.money, 200);
+    gameState.money -= lost;
+    toast('💀 Ma đầu nổi giận, cướp ' + fmt(lost) + ' 💰!');
+    logEvent('💀 Ma đầu cướp ' + fmt(lost) + ' 💰');
+  }
+
+  endDemon();
+  audio.bassDrop();
+  flash('#7c3aed');
+  shake(1);
+  updateHUD();
+  saveGame(false);
+}
+
+function tickDemon(dt) {
+  if (demon.active) {
+    demon.time -= dt;
+    const pct = clamp(demon.time / demon.total, 0, 1);
+    el('demon-bar').style.width = (pct * 100) + '%';
+    el('demon-count').textContent = Math.ceil(Math.max(0, demon.time)) + 's';
+    if (demonMesh) demonMesh.rotation.y += dt * 0.8;
+    if (demon.time <= 0) demonFail();
+    return;
+  }
+
+  demon.cool += dt;
+  const blood = gameState.weather === 'bloodmoon';
+  const threshold = blood ? 28 : 60;
+  if (demon.cool > threshold && gameState.day >= 2 && customers.length > 0) {
+    demon.cool = 0;
+    if (Math.random() < (blood ? 0.85 : 0.38)) spawnDemon();
+  }
+}
+
+/* ---------- APPrentice AUTOSELL ---------- */
+let apprTimer = 0;
+
+function tickApprentice(dt) {
+  if (!gameState.hasApprentice) return;
+  if (!gameState.cakes.length) { apprTimer = 0; return; }
+
+  apprTimer += dt;
+  const speed = Math.max(1.6, 5 - (gameState.apprenticeLevel || 0) * 0.7);
+  if (apprTimer >= speed) {
+    apprTimer = 0;
+    sellOneCake(true);
+  }
+}
+
+/* ---------- QUESTS ---------- */
+function rollQuests() {
+  const pool = QUEST_POOL.slice().sort(() => Math.random() - 0.5).slice(0, 3);
+  gameState.quests = pool.map(q => ({
+    id:q.id, goal:q.goal, reward:q.reward, icon:q.icon, text:q.text, done:false
+  }));
+}
+
+function questProgress(q) {
+  const s = gameState.dayStats || {};
+  const cur = q.id === 'high' ? (s.high || 0) : (s[q.id] || 0);
+  return { cur, goal:q.goal, pct: clamp(cur / q.goal, 0, 1) };
+}
+
+function checkQuests() {
+  if (!gameState.quests || !gameState.quests.length) return;
+
+  let changed = false;
+  gameState.quests.forEach(q => {
+    if (q.done) return;
+    const p = questProgress(q);
+    if (p.cur >= p.goal) {
+      q.done = true;
+      gameState.money += q.reward;
+      changed = true;
+      logEvent('✅ ' + q.text + ' +' + fmt(q.reward) + ' 💰');
+      setTimeout(() => toast('✅ Nhiệm vụ xong: ' + q.text + ' +' + fmt(q.reward) + ' 💰'), 400);
+      audio.win();
+    }
+  });
+
+  if (changed) {
+    updateHUD();
+    saveGame(false);
+    if (el('modal-shop').classList.contains('open') && shopTab === 'quest') renderShop('quest');
+  }
+}
+
+/* ---------- STREAK ---------- */
+function updateStreak() {
+  const today = todayStr();
+  if (gameState.lastPlayDate === today) return;
+
+  const y = new Date(Date.now() - 86400000).toDateString();
+  gameState.streak = (gameState.lastPlayDate === y) ? (gameState.streak || 0) + 1 : 1;
+  gameState.lastPlayDate = today;
+}
+
+function dayGems() {
+  const today = todayStr();
+  let g = 1;
+  if (gameState.streakRewardedOn !== today) {
+    g = clamp(1 + Math.floor((gameState.streak || 1) / 3), 1, 4);
+    gameState.streakRewardedOn = today;
+  }
+  return g;
+}
+
+/* ---------- OFFLINE ---------- */
+function checkOffline() {
+  const now = Date.now();
+  const last = gameState.lastSeen || now;
+  const away = Math.min((now - last) / 1000, 8 * 3600);
+  gameState.lastSeen = now;
+
+  if (away < 180) return;
+
+  const daoMul = 1 + (gameState.daoHeart || 0) * 0.05;
+  let gain = Math.floor((away / 60) * 5 * REALMS[gameState.realm].mult * daoMul);
+  if (gameState.hasApprentice) gain = Math.round(gain * 1.5);
+  if (gain <= 0) return;
+
+  gameState.money += gain;
+
+  const mins = Math.floor(away / 60);
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+
+  el('offline-time').textContent = 'Bạn đã rời tiệm ' + (h > 0 ? h + ' giờ ' : '') + m + ' phút';
+  el('offline-gain').textContent = '+' + fmt(gain) + ' 💰';
+  el('offline-note').textContent = gameState.hasApprentice
+    ? 'Đệ tử trông quán (+50% hiệu suất bế quan)'
+    : 'Mở khoá Đệ Tử để tăng 50% linh khí bế quan';
+
+  setTimeout(() => openModal('modal-offline'), 900);
+  logEvent('🧘 Bế quan +' + fmt(gain) + ' 💰');
+}
+
+/* ---------- CRAFTING ---------- */
+const craft = {
+  needle:0, raf:0,
+  fry:0, fryRaf:0,
+  pressScore:0, batterScore:0, fryScore:0, total:0,
+  step:1, sizzleTimer:null, starBoost:false
+};
+
+function stopGauges() {
+  cancelAnimationFrame(craft.raf);
+  cancelAnimationFrame(craft.fryRaf);
+  clearInterval(craft.sizzleTimer);
+  craft.raf = 0; craft.fryRaf = 0; craft.sizzleTimer = null;
+}
+
+function startPressGauge() {
+  cancelAnimationFrame(craft.raf);
+  const t0 = performance.now();
+  const loop = now => {
+    const e = (now - t0) / 1000;
+    craft.needle = 50 + 50 * Math.sin(e * 3.3);
+    const n = el('press-needle');
+    if (n) n.style.left = craft.needle + '%';
+    craft.raf = requestAnimationFrame(loop);
+  };
+  craft.raf = requestAnimationFrame(loop);
+}
+
+function startFryGauge() {
+  cancelAnimationFrame(craft.fryRaf);
+  const t0 = performance.now();
+  const loop = now => {
+    const e = (now - t0) / 1000;
+    craft.fry = 50 + 50 * Math.sin(e * 3.0 + 1.1);
+    const n = el('fry-needle');
+    if (n) n.style.left = craft.fry + '%';
+    const tp = el('fry-temp');
+    if (tp) tp.textContent = Math.round(158 + craft.fry * 0.45) + '°C';
+    craft.fryRaf = requestAnimationFrame(loop);
+  };
+  craft.fryRaf = requestAnimationFrame(loop);
+
+  clearInterval(craft.sizzleTimer);
+  craft.sizzleTimer = setInterval(() => audio.sizzle(), 420);
+}
+
+function zoneScore(value, center, fullWidth, falloff) {
+  const d = Math.abs(value - center);
+  if (d <= fullWidth) return 1;
+  return clamp(1 - (d - fullWidth) / falloff, 0, 1);
+}
+
+function openCrafting() {
+  const cost = bakeCost();
+
+  if (gameState.money < cost) { toast('💸 Cần ' + cost + ' 💰 để làm bánh!'); return; }
+  if (gameState.cakes.length >= capacity()) { toast('🍰 Quầy đã đầy! Bán bớt trước.'); return; }
+
+  gameState.money -= cost;
+  updateHUD();
+
+  craft.pressScore = 0;
+  craft.batterScore = 0;
+  craft.fryScore = 0;
+  craft.total = 0;
+  craft.step = 1;
+
+  el('craft-step-1').classList.remove('hidden');
+  el('craft-step-2').classList.add('hidden');
+  el('craft-step-3').classList.add('hidden');
+  el('craft-result').classList.add('hidden');
+  el('craft-title').textContent = 'BƯỚC 1 · ÉP CHUỐI';
+  el('craft-sub').textContent = gameState.weather === 'starfall'
+    ? '⭐ Sao Băng hộ mệnh: mẻ này chắc chắn ≥92 điểm!'
+    : 'Canh vạch khi linh khí tụ đỉnh!';
+  el('craft-icon').textContent = '🍌';
+
+  openModal('modal-craft');
+  startPressGauge();
+  audio.click();
+}
+
+function pressAction() {
+  stopGauges();
+  craft.pressScore = Math.round(zoneScore(craft.needle, 79, 8, 40) * 30);
+  audio.press();
+  shake(0.35);
+
+  if (bunnyGroup) {
+    bunnyGroup.scale.set(1.12, 0.88, 1.12);
+    setTimeout(() => {
+      if (bunnyGroup) {
+        const r = gameState.realm;
+        bunnyGroup.scale.setScalar(1 + r * 0.05);
+      }
+    }, 160);
+  }
+
+  el('craft-step-1').classList.add('hidden');
+  el('craft-step-2').classList.remove('hidden');
+  el('craft-title').textContent = 'BƯỚC 2 · LĂN BỘT';
+  el('craft-sub').textContent = 'Chọn độ dày lớp bột hoàn hảo!';
+  el('craft-icon').textContent = '🥣';
+  el('batter-value').textContent = el('slider-batter').value;
+}
+
+function dipAction() {
+  const v = parseInt(el('slider-batter').value, 10);
+  const d = Math.abs(v - 52);
+  craft.batterScore = Math.round(clamp(1 - Math.max(0, d - 8) / 45, 0, 1) * 35);
+
+  el('craft-step-2').classList.add('hidden');
+  el('craft-step-3').classList.remove('hidden');
+  el('craft-title').textContent = 'BƯỚC 3 · CHIÊN BÁNH';
+  el('craft-sub').textContent = 'Vớt bánh đúng độ vàng ươm!';
+  el('craft-icon').textContent = '🍳';
+
+  startFryGauge();
+  audio.click();
+}
+
+function fryAction() {
+  stopGauges();
+  craft.fryScore = Math.round(zoneScore(craft.fry, 72, 10, 42) * 35);
+  audio.win();
+
+  let total = clamp(craft.pressScore + craft.batterScore + craft.fryScore, 0, 100);
+
+  let starNote = '';
+  if (gameState.weather === 'starfall' && !gameState.starUsed) {
+    gameState.starUsed = true;
+    if (total < 92) { total = 92; starNote = ' ⭐'; }
+  }
+
+  craft.total = total;
+
+  el('craft-step-3').classList.add('hidden');
+  el('craft-result').classList.remove('hidden');
+  el('craft-title').textContent = 'ĐAN DƯỢC THÀNH HÌNH';
+  el('craft-sub').textContent = 'Poinhoinhoi đã hoàn thành mẻ bánh!';
+  el('craft-icon').textContent = '✨';
+
+  el('res-score').innerHTML = total + '<span class="text-xl text-yellow-500/70">/100</span>' + starNote;
+  el('res-1').textContent = craft.pressScore + '/30';
+  el('res-2').textContent = craft.batterScore + '/35';
+  el('res-3').textContent = craft.fryScore + '/35';
+
+  let grade, color;
+  if (total >= 95)      { grade = '🌟 THIÊN ĐAN HOÀN MỸ'; color = '#fde047'; }
+  else if (total >= 80) { grade = '💫 CỬU CHUYỂN LINH ĐAN'; color = '#34d399'; }
+  else if (total >= 60) { grade = '🍌 BÁNH NGON'; color = '#fbbf24'; }
+  else                  { grade = '🔥 BÁNH CHÁY KHÉT'; color = '#f87171'; }
+
+  el('res-grade').textContent = grade;
+  el('res-grade').style.color = color;
+
+  const bonus = total >= 95 ? 3 : total >= 80 ? 2 : 1;
+  el('res-cakes').textContent = bonus + ' chiếc';
+
+  if (total >= 95)      { flash('#fef08a'); shake(1); audio.powerUp(); }
+  else if (total >= 80) { flash('#a7f3d0'); shake(0.5); }
+
+  gameState.dayStats.high = Math.max(gameState.dayStats.high || 0, total);
+  checkQuests();
+}
+
+function finishCrafting() {
+  const total = craft.total || 0;
+  const bonus = total >= 95 ? 3 : total >= 80 ? 2 : 1;
+  const price = cakePrice(total);
+
+  let added = 0;
+  for (let i = 0; i < bonus; i++) {
+    if (gameState.cakes.length >= capacity()) break;
+    gameState.cakes.push({ score:total, price });
+    added++;
+  }
+
+  gameState.bestScore = Math.max(gameState.bestScore || 0, total);
+  gameState.dayStats.craft++;
+
+  syncCakeMeshes();
+  updateHUD();
+  checkQuests();
+  saveGame(false);
+  closeModal('modal-craft');
+  logEvent('🍌 Làm bánh ' + total + ' điểm');
+
+  if (added < bonus) toast('⚠️ Quầy chỉ còn chỗ cho ' + added + '/' + bonus + ' bánh!');
+  else toast('🍌 Đã bày ' + added + ' bánh · ' + fmt(price) + ' 💰/chiếc');
+}
+
+/* ---------- SHOP ---------- */
+let shopTab = 'realm';
+
+function openShop(tab) {
+  shopTab = tab || 'realm';
+  renderShop(shopTab);
+  openModal('modal-shop');
+}
+
+function renderShop(tab) {
+  const body = el('shop-body');
+  if (!body) return;
+
+  document.querySelectorAll('#shop-tabs .tab-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === tab);
+  });
+
+  if (tab === 'realm')        body.innerHTML = renderRealmTab();
+  else if (tab === 'skin')    body.innerHTML = renderSkinTab();
+  else if (tab === 'aura')    body.innerHTML = renderAuraTab();
+  else if (tab === 'upgrade') body.innerHTML = renderUpgradeTab();
+  else if (tab === 'quest')   body.innerHTML = renderQuestTab();
+  else                        body.innerHTML = renderRetinueTab();
+}
+
+function renderRealmTab() {
+  const prestige = gameState.realm >= REALMS.length - 1
+    ? '<div class="glass-card p-3 rounded-2xl border border-violet-400/50 flex items-center justify-between gap-3 mt-2">' +
+        '<div class="flex items-center gap-2.5 min-w-0">' +
+          '<div class="w-9 h-9 rounded-xl bg-violet-500/20 text-violet-300 flex items-center justify-center text-lg shrink-0">♻️</div>' +
+          '<div class="min-w-0">' +
+            '<div class="text-sm font-black text-white">ĐẠI ĐẠO LUÂN HỒI</div>' +
+            '<div class="text-[10px] text-slate-400">Reset tiến trình, nhận Đạo Tâm vĩnh viễn<br>+5% tiền mỗi Đạo Tâm</div>' +
+          '</div>' +
+        '</div>' +
+        '<button data-act="prestige" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-[10px] font-black hover:brightness-110">LUÂN HỒI</button>' +
+      '</div>'
+    : '';
+
+  return REALMS.map((r, i) => {
+    const isCurrent = gameState.realm === i;
+    const isNext = gameState.realm === i - 1;
+    const canAfford = gameState.money >= r.cost;
+    const locked = i > gameState.realm;
+
+    let right;
+    if (isCurrent) {
+      right = '<span class="px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 text-[11px] font-black border border-emerald-400/40">ĐANG Ở ĐÂY</span>';
+    } else if (isNext) {
+      right = '<button data-act="realm" class="px-3 py-1.5 rounded-lg text-[11px] font-black transition ' +
+        (canAfford ? 'bg-gradient-to-r from-amber-400 to-pink-500 text-slate-950 hover:brightness-110 shadow-lg' : 'bg-slate-700 text-slate-400') +
+        '">ĐỘT PHÁ ' + fmt(r.cost) + ' 💰</button>';
+    } else if (locked) {
+      right = '<span class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-500 text-[11px] font-bold border border-slate-700"><i class="fa-solid fa-lock mr-1"></i>KHOÁ</span>';
+    } else {
+      right = '<span class="px-3 py-1.5 rounded-lg bg-slate-800/60 text-slate-500 text-[11px] font-bold">ĐÃ QUA</span>';
+    }
+
+    return '<div class="glass-card p-3 rounded-2xl border ' + (isCurrent ? 'border-amber-400/60' : 'border-slate-700/50') + ' flex items-center justify-between gap-3">' +
+      '<div class="flex items-center gap-2.5 min-w-0">' +
+        '<div class="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center text-lg shrink-0">' + r.icon + '</div>' +
+        '<div class="min-w-0">' +
+          '<div class="text-sm font-black text-white truncate">' + r.full + ' <span class="text-amber-300 text-[11px]">x' + r.mult.toFixed(1) + '</span></div>' +
+          '<div class="text-[10px] text-slate-400 truncate">' + r.fx + '</div>' +
+        '</div>' +
+      '</div>' + right + '</div>';
+  }).join('') + prestige;
+}
+
+function renderSkinTab() {
+  return Object.keys(SKINS).map(id => {
+    const s = SKINS[id];
+    const owned = gameState.ownedSkins.includes(id);
+    const active = gameState.skin === id;
+    const priceTxt = s.price === 0 ? 'MIỄN PHÍ' : fmt(s.price) + (s.cur === 'gems' ? ' 💎' : ' 💰');
+
+    const btn = active
+      ? '<span class="px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 text-[10px] font-black border border-emerald-400/40">ĐANG MẶC</span>'
+      : owned
+        ? '<button data-act="skin" data-id="' + id + '" class="px-3 py-1.5 rounded-lg bg-pink-500/30 hover:bg-pink-500 text-pink-200 hover:text-white text-[10px] font-black border border-pink-400/40 transition">MẶC</button>'
+        : '<button data-act="skin" data-id="' + id + '" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-400 to-pink-500 text-slate-950 text-[10px] font-black hover:brightness-110 transition">' + priceTxt + '</button>';
+
+    return '<div class="glass-card p-3 rounded-2xl border border-slate-700/50 flex items-center justify-between gap-3">' +
+      '<div class="flex items-center gap-2.5 min-w-0">' +
+        '<div class="w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0" style="background:rgba(255,255,255,.07)">' + s.icon + '</div>' +
+        '<div class="min-w-0">' +
+          '<div class="text-sm font-black text-white truncate">' + s.name + '</div>' +
+          '<div class="text-[10px] text-slate-400 truncate">' + s.fx + ' · <span class="text-pink-300">' + s.tag + '</span></div>' +
+        '</div>' +
+      '</div>' + btn + '</div>';
+  }).join('');
+}
+
+function renderAuraTab() {
+  return Object.keys(AURAS).map(id => {
+    const a = AURAS[id];
+    const owned = gameState.ownedAuras.includes(id);
+    const active = gameState.aura === id;
+    const priceTxt = a.price === 0 ? 'MIỄN PHÍ' : fmt(a.price) + (a.cur === 'gems' ? ' 💎' : ' 💰');
+
+    const btn = active
+      ? '<span class="px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 text-[10px] font-black border border-emerald-400/40">ĐANG BẬT</span>'
+      : owned
+        ? '<button data-act="aura" data-id="' + id + '" class="px-3 py-1.5 rounded-lg bg-cyan-500/30 hover:bg-cyan-500 text-cyan-100 hover:text-white text-[10px] font-black border border-cyan-400/40 transition">BẬT</button>'
+        : '<button data-act="aura" data-id="' + id + '" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-fuchsia-500 to-cyan-400 text-slate-950 text-[10px] font-black hover:brightness-110 transition">' + priceTxt + '</button>';
+
+    return '<div class="glass-card p-3 rounded-2xl border border-slate-700/50 flex items-center justify-between gap-3">' +
+      '<div class="flex items-center gap-2.5 min-w-0">' +
+        '<div class="w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0" style="background:rgba(255,255,255,.07)">' + a.icon + '</div>' +
+        '<div class="min-w-0">' +
+          '<div class="text-sm font-black text-white truncate">' + a.name + '</div>' +
+          '<div class="text-[10px] text-slate-400 truncate">' + a.fx + ' · ' + a.count + ' hạt</div>' +
+        '</div>' +
+      '</div>' + btn + '</div>';
+  }).join('');
+}
+
+function renderUpgradeTab() {
+  return Object.keys(UPGRADES).map(id => {
+    const u = UPGRADES[id];
+    const lvl = gameState.upgrades[id];
+    const maxed = lvl >= u.max;
+    const cost = Math.round(u.base * Math.pow(u.mult, lvl - 1));
+    const canAfford = gameState.money >= cost;
+
+    const btn = maxed
+      ? '<span class="px-3 py-1.5 rounded-lg bg-amber-500/20 text-amber-300 text-[10px] font-black border border-amber-400/40">MAX</span>'
+      : '<button data-act="upgrade" data-id="' + id + '" class="px-3 py-1.5 rounded-lg text-[10px] font-black transition ' +
+        (canAfford ? 'bg-gradient-to-r from-amber-400 to-pink-500 text-slate-950 hover:brightness-110' : 'bg-slate-700 text-slate-400') +
+        '">' + fmt(cost) + ' 💰</button>';
+
+    return '<div class="glass-card p-3 rounded-2xl border border-slate-700/50 flex items-center justify-between gap-3">' +
+      '<div class="flex items-center gap-2.5 min-w-0">' +
+        '<div class="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center text-amber-300 shrink-0"><i class="fa-solid ' + u.icon + '"></i></div>' +
+        '<div class="min-w-0">' +
+          '<div class="text-sm font-black text-white truncate">' + u.name + ' <span class="text-[10px] text-pink-300">Lv.' + lvl + '/' + u.max + '</span></div>' +
+          '<div class="text-[10px] text-slate-400 truncate">' + u.desc(lvl) + '</div>' +
+        '</div>' +
+      '</div>' + btn + '</div>';
+  }).join('');
+}
+
+function renderQuestTab() {
+  const w = WEATHERS[gameState.weather] || WEATHERS.clear;
+  const m = gameState.market || BASE_MARKET;
+
+  const head =
+    '<div class="glass-card p-3 rounded-2xl border border-cyan-400/40 mb-1">' +
+      '<div class="flex items-center justify-between mb-1">' +
+        '<span class="text-sm font-black text-white">' + w.name + '</span>' +
+        '<span class="text-[10px] text-cyan-300">🔥 Chuỗi ' + (gameState.streak || 1) + ' ngày</span>' +
+      '</div>' +
+      '<div class="text-[10px] text-slate-400 mb-2">' + w.desc + '</div>' +
+      '<div class="text-[10px] text-slate-300">Giá nguyên liệu hôm nay: 🍌 ' + (m.banana||0) + ' · 🌾 ' + (m.flour||0) + ' · 🫗 ' + (m.oil||0) + ' → <b class="text-yellow-300">' + bakeCost() + ' 💰/mẻ</b></div>' +
+    '</div>';
+
+  const quests = (gameState.quests || []).map(q => {
+    const p = questProgress(q);
+    const bar = Math.round(p.pct * 100);
+    const color = q.done ? 'from-emerald-500 to-teal-500' : 'from-pink-500 to-amber-500';
+    return '<div class="glass-card p-3 rounded-2xl border ' + (q.done ? 'border-emerald-400/40' : 'border-slate-700/50') + '">' +
+      '<div class="flex items-center justify-between mb-1.5">' +
+        '<span class="text-sm font-bold text-white">' + q.icon + ' ' + q.text + '</span>' +
+        (q.done
+          ? '<span class="text-[10px] font-black text-emerald-300">✓ +' + fmt(q.reward) + ' 💰</span>'
+          : '<span class="text-[10px] font-bold text-slate-400">' + p.cur + '/' + p.goal + '</span>') +
+      '</div>' +
+      '<div class="h-1.5 rounded-full bg-slate-800 overflow-hidden">' +
+        '<div class="h-full bg-gradient-to-r ' + color + '" style="width:' + bar + '%"></div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  return head + quests +
+    '<div class="text-[10px] text-slate-500 text-center pt-1">Nhiệm vụ làm mới khi bắt đầu ngày mới</div>';
+}
+
+function renderRetinueTab() {
+  let html = '';
+
+  const apprCost = gameState.apprenticeLevel >= 3 ? 0 : Math.round(1500 * Math.pow(2.1, gameState.apprenticeLevel));
+
+  if (!gameState.hasApprentice) {
+    html += '<div class="glass-card p-3 rounded-2xl border border-blue-400/40 flex items-center justify-between gap-3">' +
+      '<div class="flex items-center gap-2.5 min-w-0">' +
+        '<div class="w-9 h-9 rounded-xl bg-blue-500/20 text-blue-300 flex items-center justify-center text-lg shrink-0">🧑‍🍳</div>' +
+        '<div class="min-w-0">' +
+          '<div class="text-sm font-black text-white">Đệ Tử Trông Quán</div>' +
+          '<div class="text-[10px] text-slate-400">Tự động bán bánh + 50% linh khí bế quan</div>' +
+        '</div>' +
+      '</div>' +
+      '<button data-act="apprentice" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-[10px] font-black hover:brightness-110">1.500 💰</button>' +
+    '</div>';
+  } else {
+    html += '<div class="glass-card p-3 rounded-2xl border border-blue-400/40 flex items-center justify-between gap-3">' +
+      '<div class="flex items-center gap-2.5 min-w-0">' +
+        '<div class="w-9 h-9 rounded-xl bg-blue-500/20 text-blue-300 flex items-center justify-center text-lg shrink-0">🧑‍🍳</div>' +
+        '<div class="min-w-0">' +
+          '<div class="text-sm font-black text-white">Đệ Tử <span class="text-[10px] text-cyan-300">Lv.' + (gameState.apprenticeLevel + 1) + '/3</span></div>' +
+          '<div class="text-[10px] text-slate-400">Bán mỗi ' + Math.max(1.6, 5 - gameState.apprenticeLevel * 0.7).toFixed(1) + 's</div>' +
+        '</div>' +
+      '</div>' +
+      (gameState.apprenticeLevel >= 3
+        ? '<span class="px-3 py-1.5 rounded-lg bg-amber-500/20 text-amber-300 text-[10px] font-black border border-amber-400/40">MAX</span>'
+        : '<button data-act="apprentice" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-[10px] font-black hover:brightness-110">' + fmt(apprCost) + ' 💰</button>') +
+    '</div>';
+  }
+
+  html += Object.keys(PETS).map(id => {
+    const p = PETS[id];
+    const owned = (gameState.pets || []).includes(id);
+    const active = gameState.pet === id;
+
+    const btn = active
+      ? '<button data-act="pet" data-id="' + id + '" class="px-3 py-1.5 rounded-lg bg-slate-700 text-slate-300 text-[10px] font-black">TẮT</button>'
+      : owned
+        ? '<button data-act="pet" data-id="' + id + '" class="px-3 py-1.5 rounded-lg bg-cyan-500/30 hover:bg-cyan-500 text-cyan-100 hover:text-white text-[10px] font-black border border-cyan-400/40">BẬT</button>'
+        : '<button data-act="pet" data-id="' + id + '" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-fuchsia-500 to-cyan-400 text-slate-950 text-[10px] font-black hover:brightness-110">' + p.price + ' 💎</button>';
+
+    return '<div class="glass-card p-3 rounded-2xl border ' + (active ? 'border-emerald-400/50' : 'border-slate-700/50') + ' flex items-center justify-between gap-3">' +
+      '<div class="flex items-center gap-2.5 min-w-0">' +
+        '<div class="w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0" style="background:rgba(255,255,255,.07)">' + p.icon + '</div>' +
+        '<div class="min-w-0">' +
+          '<div class="text-sm font-black text-white truncate">' + p.name + '</div>' +
+          '<div class="text-[10px] text-slate-400 truncate">' + p.desc + '</div>' +
+        '</div>' +
+      '</div>' + btn + '</div>';
+  }).join('');
+
+  return html;
+}
+
+function pay(amount, currency) {
+  if (currency === 'gems') {
+    if (gameState.gems < amount) { toast('💎 Không đủ Kim Cương!'); return false; }
+    gameState.gems -= amount;
+  } else {
+    if (gameState.money < amount) { toast('💸 Không đủ tiền!'); return false; }
+    gameState.money -= amount;
+  }
+  return true;
+}
+
+function shopAction(act, id) {
+  if (act === 'realm') {
+    const next = gameState.realm + 1;
+    if (next >= REALMS.length) return;
+
+    const r = REALMS[next];
+    if (gameState.money < r.cost) { toast('💸 Cần ' + fmt(r.cost) + ' 💰 để đột phá!'); return; }
+
+    gameState.money -= r.cost;
+    gameState.realm = next;
+    gameState.gems += 3;
+
+    applyVisuals();
+    audio.bassDrop();
+    setTimeout(() => audio.zitherChord(), 350);
+    flash(next >= 4 ? '#a78bfa' : '#fef08a');
+    shake(next >= 5 ? 1.4 : 0.9);
+    toast('⚡ ĐỘT PHÁ: ' + r.full + ' · x' + r.mult.toFixed(1) + '! (+3 💎)');
+    logEvent('⚡ Đột phá ' + r.full);
+
+  } else if (act === 'prestige') {
+    doPrestige();
+    return;
+
+  } else if (act === 'skin') {
+    const s = SKINS[id];
+    if (gameState.ownedSkins.includes(id)) {
+      gameState.skin = id;
+      applyVisuals();
+      audio.click();
+      toast('🎨 Đã mặc: ' + s.name);
+    } else {
+      if (!pay(s.price, s.cur)) return;
+      gameState.ownedSkins.push(id);
+      gameState.skin = id;
+      applyVisuals();
+      audio.powerUp();
+      flash('#ffffff');
+      shake(0.6);
+      toast('🎉 Mở khoá: ' + s.name);
+      logEvent('🎨 Mở khoá ' + s.name);
+    }
+
+  } else if (act === 'aura') {
+    const a = AURAS[id];
+    if (gameState.ownedAuras.includes(id)) {
+      gameState.aura = id;
+      activateAuraFX(id);
+    } else {
+      if (!pay(a.price, a.cur)) return;
+      gameState.ownedAuras.push(id);
+      gameState.aura = id;
+      activateAuraFX(id);
+      toast('🔥 Mở khoá bá khí: ' + a.name);
+    }
+
+  } else if (act === 'upgrade') {
+    const u = UPGRADES[id];
+    const lvl = gameState.upgrades[id];
+    if (lvl >= u.max) return;
+
+    const cost = Math.round(u.base * Math.pow(u.mult, lvl - 1));
+    if (!pay(cost, 'money')) return;
+
+    gameState.upgrades[id] = lvl + 1;
+    audio.coin();
+    if (id === 'counterSlots') syncCakeMeshes();
+    toast('⬆️ ' + u.name + ' → Lv.' + gameState.upgrades[id]);
+    logEvent('⬆️ Nâng ' + u.name);
+
+  } else if (act === 'apprentice') {
+    if (!gameState.hasApprentice) {
+      if (!pay(1500, 'money')) return;
+      gameState.hasApprentice = true;
+      gameState.apprenticeLevel = 0;
+      toast('🧑‍🍳 Đệ tử đã nhận việc! Tự động bán bánh.');
+      logEvent('🧑‍🍳 Thuê đệ tử');
+      audio.win();
+    } else {
+      if (gameState.apprenticeLevel >= 3) return;
+      const cost = Math.round(1500 * Math.pow(2.1, gameState.apprenticeLevel));
+      if (!pay(cost, 'money')) return;
+      gameState.apprenticeLevel++;
+      toast('⬆️ Đệ tử → Lv.' + (gameState.apprenticeLevel + 1));
+      logEvent('⬆️ Nâng cấp đệ tử');
+      audio.coin();
+    }
+    buildApprenticeVisual();
+
+  } else if (act === 'pet') {
+    const p = PETS[id];
+    gameState.pets = gameState.pets || [];
+
+    if (gameState.pet === id) {
+      gameState.pet = null;
+      toast('🐾 Đã cho linh sủng nghỉ ngơi.');
+    } else if (gameState.pets.includes(id)) {
+      gameState.pet = id;
+      toast('🐾 ' + p.name + ' theo hầu!');
+    } else {
+      if (!pay(p.price, 'gems')) return;
+      gameState.pets.push(id);
+      gameState.pet = id;
+      toast('🎉 Linh sủng mới: ' + p.name);
+      logEvent('🐾 Nhận ' + p.name);
+      audio.powerUp();
+      flash('#ffffff');
+    }
+    buildPetVisual();
+  }
+
+  updateHUD();
+  saveGame(false);
+  renderShop(shopTab);
+}
+
+function activateAuraFX(id) {
+  const a = AURAS[id];
+  if (id === 'off') { toast('⭕ Đã tắt bá khí.'); return; }
+
+  const hex = '#' + a.color.toString(16).padStart(6, '0');
+  flash(hex);
+  shake(id === 'celestial' ? 1.5 : id === 'mystic' ? 1 : 0.6);
+
+  if (id === 'saiyan')         audio.powerUp();
+  else if (id === 'fire')      audio.bassDrop();
+  else if (id === 'mystic')    { audio.bassDrop(); setTimeout(() => audio.zitherChord(), 200); }
+  else if (id === 'celestial') { audio.zitherChord(); setTimeout(() => audio.powerUp(), 300); }
+
+  toast('🔥 ' + a.name + ' khai mở!');
+  logEvent('🔥 Bá khí: ' + a.name);
+  updateHUD();
+  saveGame(false);
+  renderShop(shopTab);
+}
+
+/* ---------- PRESTIGE ---------- */
+function doPrestige() {
+  if (gameState.realm < REALMS.length - 1) {
+    toast('⚡ Cần đạt VÔ THƯỢNG THIÊN TÔN!');
+    return;
+  }
+
+  const gained = Math.max(1, Math.floor(Math.sqrt(gameState.totalSold || 1) / 3));
+
+  gameState.daoHeart = (gameState.daoHeart || 0) + gained;
+  gameState.money = 150;
+  gameState.gems = Math.max(5, gameState.gems);
+  gameState.realm = 0;
+  gameState.cakes = [];
+  gameState.upgrades = { bananaQuality:1, marketing:1, counterSlots:1 };
+  gameState.day = 1;
+  gameState.dayEarnings = 0;
+  gameState.dayStats = { craft:0, sold:0, served:0, earn:0, high:0 };
+
+  rollQuests();
+  rollMarket();
+  rollWeather();
+  applyVisuals();
+  syncCakeMeshes();
+  updateHUD();
+  saveGame(false);
+
+  flash('#a78bfa');
+  shake(1.5);
+  audio.bassDrop();
+  setTimeout(() => audio.zitherChord(), 400);
+
+  toast('♻️ LUÂN HỒI! +' + gained + ' Đạo Tâm (tổng ' + gameState.daoHeart + ')');
+  logEvent('♻️ Luân hồi +' + gained + ' Đạo Tâm');
+  renderShop(shopTab);
+}
+
+/* ---------- MODALS ---------- */
+function openModal(id) {
+  const m = el(id);
+  if (m) m.classList.add('open');
+}
+
+function closeModal(id) {
+  const m = el(id);
+  if (!m) return;
+  m.classList.remove('open');
+  if (id === 'modal-craft') stopGauges();
+}
+
+/* ---------- HUD ---------- */
+function updateHUD() {
+  el('hud-money').textContent = fmt(gameState.money);
+  el('hud-gems').textContent = gameState.gems;
+  el('hud-day').textContent = gameState.day;
+  el('hud-served').textContent = gameState.totalServed;
+
+  const r = REALMS[gameState.realm];
+  el('hud-realm').textContent = r.name;
+  el('hud-mult').textContent = 'x' + r.mult.toFixed(1);
+
+  const w = WEATHERS[gameState.weather] || WEATHERS.clear;
+  el('hud-weather').textContent = w.name;
+  el('hud-streak').textContent = gameState.streak || 1;
+  el('hud-dao').textContent = gameState.daoHeart || 0;
+
+  el('hud-cakes').textContent = gameState.cakes.length + '/' + capacity();
+  el('hud-bake-cost').textContent = '-' + bakeCost() + ' 💰';
+
+  if (el('modal-shop').classList.contains('open') && shopTab === 'quest') renderShop('quest');
+}
+
+/* ---------- SAVE ---------- */
+function saveGame(showToast) {
+  try {
+    gameState.lastSeen = Date.now();
+    localStorage.setItem(SAVE_KEY, JSON.stringify(gameState));
+    if (showToast) toast('💾 Đã lưu tiến trình!');
+  } catch (e) {
+    console.warn('Save failed', e);
+  }
+}
+
+function loadGame() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY) || localStorage.getItem('poinhoinhoi_xianxia_v1');
+    if (!raw) return;
+
+    const parsed = JSON.parse(raw);
+    gameState = Object.assign({}, DEFAULT_STATE, parsed);
+    gameState.upgrades = Object.assign({}, DEFAULT_STATE.upgrades, parsed.upgrades || {});
+    gameState.dayStats = Object.assign({}, DEFAULT_STATE.dayStats, parsed.dayStats || {});
+    gameState.market = Object.assign({}, BASE_MARKET, parsed.market || {});
+
+    if (!Array.isArray(gameState.ownedSkins)) gameState.ownedSkins = ['pink_classic','white_cotton'];
+    if (!gameState.ownedSkins.includes('pink_classic')) gameState.ownedSkins.push('pink_classic');
+
+    if (!Array.isArray(gameState.ownedAuras)) gameState.ownedAuras = ['off'];
+    if (!gameState.ownedAuras.includes('off')) gameState.ownedAuras.push('off');
+
+    if (!Array.isArray(gameState.cakes)) gameState.cakes = [];
+    if (!Array.isArray(gameState.pets)) gameState.pets = [];
+    if (!Array.isArray(gameState.quests) || !gameState.quests.length) rollQuests();
+    if (!Array.isArray(gameState.activityLog)) gameState.activityLog = [];
+
+    gameState.realm = clamp(gameState.realm | 0, 0, REALMS.length - 1);
+    if (!SKINS[gameState.skin]) gameState.skin = 'pink_classic';
+    if (!AURAS[gameState.aura]) gameState.aura = 'off';
+    if (!WEATHERS[gameState.weather]) gameState.weather = 'clear';
+
+  } catch (e) {
+    console.warn('Load failed', e);
+  }
+}
+
+/* ---------- ANIMATION HELPERS ---------- */
+function updateAuraParticles(t) {
+  if (!auraPoints) return;
+
+  const cfg = AURAS[gameState.aura] || AURAS.off;
+  const count = Math.min(cfg.count, MAX_AURA_PARTICLES);
+  const geo = auraPoints.geometry;
+  geo.setDrawRange(0, count);
+
+  if (count === 0) { auraLight.intensity = 0; return; }
+
+  const pos = geo.attributes.position.array;
+  const cx = BUNNY_POS.x, cz = BUNNY_POS.z, cy = 0.15;
+
+  for (let i = 0; i < count; i++) {
+    const s1 = auraSeeds[i*3], s2 = auraSeeds[i*3 + 1], s3 = auraSeeds[i*3 + 2];
+    let x = 0, y = 0, z = 0;
+
+    if (cfg.mode === 'up') {
+      const life = (t * 0.45 + s1) % 1;
+      const ang = s2 * Math.PI * 2 + t * 1.2;
+      const r = 0.34 + s3 * 0.46;
+      x = Math.cos(ang) * r; z = Math.sin(ang) * r; y = cy + life * 2.5;
+
+    } else if (cfg.mode === 'flame') {
+      const life = (t * 0.85 + s1) % 1;
+      const ang = s2 * Math.PI * 2 + t * 2.1 + life * 4;
+      const r = (0.3 + s3 * 0.42) * (1 - life * 0.5) + Math.sin(t * 7 + s1 * 12) * 0.05;
+      x = Math.cos(ang) * r; z = Math.sin(ang) * r; y = cy + life * 2.3;
+
+    } else if (cfg.mode === 'helix') {
+      const life = (s3 + t * 0.22) % 1;
+      const ang = s2 * Math.PI * 2 + t * 3.1 + life * 12;
+      const r = 0.6 + Math.sin(t * 2 + s1 * 6) * 0.14;
+      x = Math.cos(ang) * r; z = Math.sin(ang) * r; y = cy + life * 2.8;
+
+    } else {
+      const life = (t * 0.26 + s1) % 1;
+      const ang = s2 * Math.PI * 2 + t * 1.7;
+      const r = 0.18 + s3 * 1.35 * (1 - life);
+      x = Math.cos(ang) * r; z = Math.sin(ang) * r; y = cy + life * 3.8;
+    }
+
+    pos[i*3] = cx + x;
+    pos[i*3 + 1] = y;
+    pos[i*3 + 2] = cz + z;
+  }
+
+  geo.attributes.position.needsUpdate = true;
+  auraPoints.material.color.setHex(cfg.color);
+  auraPoints.material.size = cfg.mode === 'celestial' ? 0.062 : 0.085;
+
+  auraLight.color.setHex(cfg.color);
+  auraLight.intensity = 1.1 + Math.sin(t * 6) * 0.3;
+  auraLight.position.set(cx, 1.35, cz);
+}
+
+function updateRain(dt) {
+  if (!rainPoints) return;
+
+  const on = gameState.weather === 'rain' || gameState.weather === 'storm';
+  rainPoints.visible = on;
+  if (!on) return;
+
+  const p = rainPoints.geometry.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    let y = p.getY(i) - dt * 9;
+    if (y < 0) y = 13;
+    p.setY(i, y);
+  }
+  p.needsUpdate = true;
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  if (!renderer || !scene || !camera) return;
+
+  const dt = Math.min(clock.getDelta(), 0.05);
+  elapsed += dt;
+  const t = elapsed;
+
+  if (bunnyGroup) {
+    const hover = gameState.realm >= 3 ? 0.12 + (gameState.realm - 2) * 0.04 : 0;
+    bunnyGroup.position.y = Math.sin(t * 2.1) * 0.028 + hover;
+    bunnyGroup.rotation.y = Math.sin(t * 0.6) * 0.08;
+    if (leftEar)  leftEar.rotation.z  =  0.3 + Math.sin(t * 1.7) * 0.075;
+    if (rightEar) rightEar.rotation.z = -0.3 - Math.sin(t * 1.7 + 0.45) * 0.075;
+  }
+
+  if (tailGroup && tailGroup.visible) {
+    tailGroup.children.forEach((p, i) => {
+      p.rotation.y = p.userData.baseAngle + Math.sin(t * 1.9 + i * 0.45) * 0.16;
+      p.rotation.x = Math.sin(t * 2.3 + i * 0.6) * 0.07;
+    });
+  }
+
+  if (lotusGroup && lotusGroup.visible) lotusGroup.rotation.y = t * 0.24;
+
+  if (swordGroup && swordGroup.visible) {
+    swordGroup.rotation.y = t * 0.72;
+    swordGroup.children.forEach(sw => {
+      sw.position.y = Math.sin(t * 2.2 + sw.userData.phase) * 0.13;
+    });
+  }
+
+  if (danOrbGroup && danOrbGroup.visible) {
+    danOrbGroup.rotation.y = -t * 1.35;
+    danOrbGroup.children.forEach((o, i) => {
+      o.position.y = Math.sin(t * 2.6 + i) * 0.16;
+    });
+  }
+
+  if (celestialRing && celestialRing.visible) celestialRing.rotation.y = t * 0.32;
+
+  if (beamGroup && beamGroup.visible) {
+    const pulse = 0.85 + Math.sin(t * 2.4) * 0.15;
+    beamGroup.userData.core.scale.set(pulse, 1, pulse);
+    beamGroup.userData.outer.scale.set(pulse * 1.05, 1, pulse * 1.05);
+  }
+
+  if (petGroup) {
+    petGroup.userData.orbit = (petGroup.userData.orbit || 0) + dt * 1.1;
+    const a = petGroup.userData.orbit;
+    petGroup.position.set(
+      BUNNY_POS.x + Math.cos(a) * 0.95,
+      0.55 + Math.sin(t * 3) * 0.07,
+      BUNNY_POS.z + Math.sin(a) * 0.95
+    );
+    petGroup.rotation.y = -a + Math.PI / 2;
+  }
+
+  if (apprenticeGroup) {
+    apprenticeGroup.position.y = 0.02 + Math.sin(t * 2.4) * 0.012;
+  }
+
+  if (scene.userData.ring1) {
+    scene.userData.ring1.rotation.z = t * 0.08;
+    scene.userData.ring1.material.opacity = 0.16 + Math.sin(t * 1.4) * 0.08;
+  }
+  if (scene.userData.ring2) scene.userData.ring2.rotation.z = -t * 0.05;
+
+  updateAuraParticles(t);
+  updateRain(dt);
+
+  if (ambientMotes) {
+    ambientMotes.rotation.y = t * 0.03;
+    ambientMotes.position.y = Math.sin(t * 0.5) * 0.2;
+  }
+
+  trySpawnCustomer(t);
+  tickApprentice(dt);
+  tickDemon(dt);
+
+  for (let i = customers.length - 1; i >= 0; i--) {
+    const c = customers[i];
+    c.update(dt, t);
+    if (c.dead) { c.dispose(); customers.splice(i, 1); }
+  }
+
+  if (shakeAmount > 0.002) {
+    shakeAmount *= 0.9;
+    const sx = (Math.random() - 0.5) * shakeAmount * 26;
+    const sy = (Math.random() - 0.5) * shakeAmount * 26;
+    renderer.domElement.style.transform = 'translate(' + sx.toFixed(1) + 'px,' + sy.toFixed(1) + 'px)';
+  } else if (renderer.domElement.style.transform !== '') {
+    renderer.domElement.style.transform = '';
+  }
+
+  if (controls) controls.update();
+  renderer.render(scene, camera);
+}
+
+function onResize() {
+  if (!camera || !renderer) return;
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.8));
+}
+
+/* ---------- PHOTO / SHARE ---------- */
+function takePhoto() {
+  if (!renderer || !scene || !camera) return;
+  try {
+    renderer.render(scene, camera);
+    const url = renderer.domElement.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'poinhoinhoi-' + Date.now() + '.png';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    toast('📷 Đã lưu ảnh tiệm bánh!');
+    logEvent('📷 Chụp ảnh');
+    audio.click();
+  } catch (e) {
+    toast('📷 Không chụp được ảnh!');
+  }
+}
+
+function shareResult() {
+  const r = REALMS[gameState.realm];
+  const txt = '🐰 Ta đạt ' + r.full + ' x' + r.mult.toFixed(1) +
+    ' tại Tiệm Bánh Chuối Poinhoinhoi! Mẻ bánh tốt nhất: ' +
+    (gameState.bestScore || 0) + '/100 🌟';
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(txt)
+      .then(() => toast('📋 Đã copy — dán lên mạng xã hội nhé!'))
+      .catch(() => toast('📋 ' + txt));
+  } else {
+    toast('📋 ' + txt);
+  }
+  audio.click();
+}
+
+/* ---------- WIRING ---------- */
+function wireUI() {
+  el('btn-audio').addEventListener('click', () => {
+    audio.init();
+    const muted = audio.toggleMute();
+    el('btn-audio').querySelector('i').className = muted ? 'fa-solid fa-volume-xmark' : 'fa-solid fa-volume-high';
+    toast(muted ? '🔇 Đã tắt âm thanh' : '🔊 Đã bật âm thanh');
+  });
+
+  el('btn-camera').addEventListener('click', takePhoto);
+  el('btn-share').addEventListener('click', shareResult);
+
+  el('btn-reset-cam').addEventListener('click', () => {
+    camera.position.set(0, 3.6, 7.4);
+    controls.target.set(0, 1.15, -0.3);
+    controls.update();
+    audio.click();
+    toast('🎥 Đã căn lại góc 360°');
+  });
+
+  el('btn-save').addEventListener('click', () => { audio.click(); saveGame(true); });
+
+  el('btn-bake').addEventListener('click', () => { audio.init(); openCrafting(); });
+
+  el('btn-sell').addEventListener('click', () => {
+    if (gameState.cakes.length === 0) { toast('🍽️ Trên quầy chưa có bánh nào!'); return; }
+
+    let sold = 0, total = 0;
+    while (gameState.cakes.length > 0) {
+      const cake = gameState.cakes.shift();
+      gameState.money += cake.price;
+      gameState.dayEarnings += cake.price;
+      gameState.totalSold++;
+      gameState.totalServed++;
+      gameState.dayStats.sold++;
+      gameState.dayStats.served++;
+      gameState.dayStats.earn += cake.price;
+      total += cake.price;
+      sold++;
+    }
+
+    if (sold >= 5) gameState.gems += Math.floor(sold / 5);
+
+    syncCakeMeshes();
+    updateHUD();
+    checkQuests();
+    saveGame(false);
+    audio.coin();
+    flash('#fde047');
+    toast('💰 Bán ' + sold + ' bánh · +' + fmt(total) + ' 💰');
+    logEvent('💰 Bán ' + sold + ' bánh +' + fmt(total));
+  });
+
+  el('btn-shop').addEventListener('click', () => { audio.init(); openShop('realm'); });
+  el('btn-custom').addEventListener('click', () => { audio.init(); openShop('skin'); });
+
+  document.querySelector('.shop-x').addEventListener('click', () => closeModal('modal-shop'));
+
+  document.querySelectorAll('#shop-tabs .tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      audio.click();
+      renderShop(btn.dataset.tab);
+    });
+  });
+
+  el('shop-body').addEventListener('click', e => {
+    const btn = e.target.closest('button[data-act]');
+    if (!btn) return;
+    shopAction(btn.dataset.act, btn.dataset.id);
+  });
+
+  el('craft-x').addEventListener('click', () => closeModal('modal-craft'));
+  el('btn-press').addEventListener('click', pressAction);
+  el('btn-dip').addEventListener('click', dipAction);
+  el('btn-fry').addEventListener('click', fryAction);
+  el('btn-finish').addEventListener('click', finishCrafting);
+
+  el('slider-batter').addEventListener('input', e => {
+    el('batter-value').textContent = e.target.value;
+  });
+
+  el('btn-serve-demon').addEventListener('click', serveDemon);
+
+  el('btn-offline-ok').addEventListener('click', () => {
+    closeModal('modal-offline');
+    updateHUD();
+    saveGame(false);
+    audio.coin();
+  });
+
+  el('btn-next-day').addEventListener('click', () => {
+    const gems = clamp(1 + Math.floor((gameState.streak || 1) / 3), 1, 4);
+    el('sum-day').textContent = gameState.day;
+    el('sum-served').textContent = gameState.dayStats.served;
+    el('sum-sold').textContent = gameState.dayStats.sold;
+    el('sum-earn').textContent = '+' + fmt(gameState.dayEarnings) + ' 💰';
+    el('sum-gems').textContent = '+' + dayGems() + ' 💎';
+    el('sum-streak').textContent = (gameState.streak || 1) + ' ngày';
+    openModal('modal-summary');
+    audio.click();
+  });
+
+  el('btn-start-day').addEventListener('click', () => {
+    gameState.day++;
+    gameState.dayEarnings = 0;
+    gameState.dayStats = { craft:0, sold:0, served:0, earn:0, high:0 };
+
+    const g = dayGems();
+    gameState.gems += g;
+
+    rollMarket();
+    rollWeather();
+    rollQuests();
+    if (demon.active) endDemon();
+
+    applyVisuals();
+    updateHUD();
+    renderActivity();
+    saveGame(false);
+    closeModal('modal-summary');
+    audio.zitherChord();
+
+    const w = WEATHERS[gameState.weather];
+    toast('🌅 Ngày ' + gameState.day + ' · ' + w.name + ' (+' + g + ' 💎)');
+    logEvent('🌅 Sang ngày ' + gameState.day + ' · ' + w.name);
+  });
+
+  ['modal-shop','modal-summary','modal-craft','modal-offline'].forEach(id => {
+    el(id).addEventListener('mousedown', e => {
+      if (e.target === el(id) && id !== 'modal-offline') closeModal(id);
+    });
+  });
+
+  document.body.addEventListener('pointerdown', () => audio.init(), { once:true });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      clock.stop();
+      saveGame(false);
+    } else {
+      clock.start();
+      lastSpawn = elapsed;
+      demon.cool = 0;
+    }
+  });
+
+  window.addEventListener('beforeunload', () => saveGame(false));
+
+  window.addEventListener('keydown', e => {
+    const shopOpen = el('modal-shop').classList.contains('open');
+
+    if (e.code === 'Escape') {
+      ['modal-shop','modal-summary','modal-craft'].forEach(id => closeModal(id));
+      return;
+    }
+
+    if (shopOpen) {
+      const tabs = ['realm','skin','aura','upgrade','quest','retinue'];
+      const n = parseInt(e.key, 10);
+      if (n >= 1 && n <= tabs.length) { audio.click(); renderShop(tabs[n - 1]); }
+      return;
+    }
+
+    if (e.code === 'Space' && !document.querySelector('.modal.open')) {
+      e.preventDefault();
+      openCrafting();
+    }
+  });
+}
+
+/* ---------- BOOT ---------- */
+function boot() {
+  loadGame();
+
+  if (!gameState.market || !gameState.market.banana) rollMarket();
+  if (!gameState.quests || !gameState.quests.length) rollQuests();
+  if (!gameState.lastPlayDate) gameState.lastPlayDate = '';
+  updateStreak();
+
+  try {
+    init3D();
+  } catch (err) {
+    console.error('3D init failed:', err);
+    el('canvas-container').innerHTML =
+      '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#f472b6;font-weight:700;text-align:center;padding:2rem;">' +
+      'Không khởi tạo được WebGL.<br>Hãy thử trình duyệt khác hoặc bật tăng tốc phần cứng.</div>';
+  }
+
+  applyVisuals();
+  updateHUD();
+  wireUI();
+  renderActivity();
+  syncCakeMeshes();
+
+  animate();
+
+  setTimeout(() => {
+    checkOffline();
+    saveGame(false);
+  }, 600);
+
+  setTimeout(() => toast('🐰 Poinhoinhoi tỉnh giấc! Xoay 360° để ngắm tiệm nhé!'), 1200);
+  setTimeout(() => toast('⚡ Làm bánh điểm cao để đột phá cảnh giới!'), 6000);
+}
+
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', boot);
+} else {
+  boot();
+}
+</script>
+</body>
+</html>
